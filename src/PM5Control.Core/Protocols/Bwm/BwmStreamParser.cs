@@ -24,24 +24,26 @@ public sealed class BwmStreamParser
     {
         while (true)
         {
-            if (_buffer.Count < 6)
+            if (_buffer.Count < BwmProtocolConstants.HeaderSize)
                 return;
 
-            var header = ReadUInt16(0);
-            if (!IsKnownHeader(header))
+            var magic = ReadUInt16(0);
+            if (!IsKnownHeader(magic))
             {
                 _buffer.RemoveAt(0);
                 continue;
             }
 
             var payloadLength = ReadUInt16(4);
-            var frameLength = 2 + 2 + 2 + payloadLength + 2;
+            var frameLength = BwmProtocolConstants.HeaderSize + payloadLength + BwmProtocolConstants.CrcSize;
             if (_buffer.Count < frameLength)
                 return;
 
-            var candidate = _buffer.Take(frameLength).ToArray();
-            if (!TryDecode(candidate, out var frame))
+            var candidate = _buffer.GetRange(0, frameLength).ToArray();
+            if (!BwmFrameCodec.TryDecode(candidate, out var frame) || frame is null)
             {
+                // Resynchronise one byte at a time. A valid frame may begin inside
+                // a malformed candidate, so never discard the whole candidate.
                 _buffer.RemoveAt(0);
                 continue;
             }
@@ -51,27 +53,10 @@ public sealed class BwmStreamParser
         }
     }
 
-    private bool TryDecode(byte[] bytes, out BwmFrame frame)
-    {
-        frame = default!;
-        var header = BitConverter.ToUInt16(bytes, 0);
-        var command = BitConverter.ToUInt16(bytes, 2);
-        var length = BitConverter.ToUInt16(bytes, 4);
-        var payload = bytes.AsSpan(6, length);
-        var expectedCrc = BitConverter.ToUInt16(bytes, 6 + length);
-        var actualCrc = BwmCrc16.Compute(bytes.AsSpan(0, 6 + length));
-
-        if (expectedCrc != actualCrc)
-            return false;
-
-        frame = new BwmFrame(header, command, payload.ToArray());
-        return true;
-    }
-
-    private static bool IsKnownHeader(ushort header) =>
-        header == BwmProtocolConstants.RequestHeader ||
-        header == BwmProtocolConstants.ResponseHeader ||
-        header == BwmProtocolConstants.BroadcastHeader;
+    private static bool IsKnownHeader(ushort magic) =>
+        magic == BwmProtocolConstants.RequestMagic ||
+        magic == BwmProtocolConstants.ResponseMagic ||
+        magic == BwmProtocolConstants.BroadcastMagic;
 
     private ushort ReadUInt16(int offset) =>
         (ushort)(_buffer[offset] | (_buffer[offset + 1] << 8));
