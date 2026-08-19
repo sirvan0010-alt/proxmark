@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "purpose": "Evidence-backed Proxmark5 firmware compatibility registry",
+  "entries": [],
+  "notes": [
+    "Do not populate firmware versions from guesses or PM3 assumptions.",
+    "Record exact firmware identifiers and evidence when observed or sourced from a reliable upstream reference.",
+    "Compatibility status and detected device state are separate concepts."
+  ]
+}
