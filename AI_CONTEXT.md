@@ -38,6 +38,93 @@ Apply the assistant's applicable requirements to that capability
 
 For example, if a particular sensitive RFID operation cannot be implemented, that does not by itself prevent work on packet codecs, GUI, USB transport, BWM diagnostics, Wi-Fi scanner presentation, firmware version detection, compatibility logic, report generation or automated tests.
 
+## PROGRESSIVE ENGINEERING WORKFLOW
+
+This repository is intentionally designed so that an AI assistant does not stop after creating the first requested file or completing only the most visible part of a task.
+
+### Task model
+
+For every development request, treat the work as:
+
+```text
+TASK A — PRIMARY
+Complete the explicitly requested change.
+
+TASK B — SECONDARY
+Inspect the code immediately affected by A and identify the next
+technical dependency, missing test, missing documentation or blocker.
+
+TASK C — NEXT-BLOCKER DISCOVERY
+Determine what prevents the next layer from becoming usable.
+Implement that next step when it is within scope and evidence allows;
+otherwise create the precise interface, test, documentation or evidence
+needed for the next step.
+```
+
+**Do not interpret completion of Task A as automatic completion of the overall engineering task.**
+
+After completing a change, the assistant should, where practical:
+
+1. inspect callers and consumers;
+2. inspect relevant tests;
+3. inspect the next dependent layer;
+4. identify concrete blockers rather than hypothetical features;
+5. implement the next non-blocked engineering step;
+6. update documentation and status;
+7. leave an explicit next step if real hardware or external evidence is required.
+
+Do not manufacture functionality merely to claim progress. The purpose of this workflow is progressive engineering, not artificial scope expansion.
+
+### Capability ladder
+
+Use this ladder to describe how far a capability has progressed:
+
+```text
+L0  DOCUMENTED
+ ↓
+L1  MODELED / MOCKED
+ ↓
+L2  PROTOCOL IMPLEMENTED
+ ↓
+L3  HOST VERIFIED
+ ↓
+L4  REAL HARDWARE OBSERVED
+ ↓
+L5  HARDWARE VERIFIED
+ ↓
+L6  AUTOMATED IN CLIENT
+ ↓
+L7  MULTI-TRANSPORT
+ ↓
+L8  WINDOWS + UBUNTU + ANDROID
+```
+
+Never skip a level in documentation without evidence. A capability can be at a different level from the rest of the project.
+
+### Discovery loop
+
+When new device behavior is discovered:
+
+```text
+Observed behavior
+      ↓
+Evidence record
+      ↓
+Protocol/Capability note
+      ↓
+Parser or adapter
+      ↓
+Automated test
+      ↓
+Compatibility entry
+      ↓
+GUI/CLI exposure
+      ↓
+Documentation
+```
+
+This is the intended mechanism for allowing the software to grow beyond the project's original assumptions about the hardware **without guessing beyond the evidence**.
+
 ## Evidence and truth rules
 
 Never claim that an operation was tested on real hardware when it was not.
@@ -51,6 +138,24 @@ Clearly distinguish:
 - `HARDWARE VERIFIED` — behavior verified against a physical Proxmark5.
 
 Do not silently turn assumptions into facts. When evidence is unavailable, say so.
+
+## Evidence-chain requirements
+
+For protocol/device observations, preserve enough evidence to reproduce the conclusion where practical:
+
+- timestamp;
+- operation/probe identifier;
+- transport;
+- request representation (redacted when necessary);
+- response representation (redacted when necessary);
+- parsed result;
+- latency;
+- retry count;
+- source of the observation;
+- confidence;
+- software/client commit.
+
+Never store credentials, private keys or unnecessary secrets in evidence logs. Redaction must be explicit.
 
 ## Current project stage
 
