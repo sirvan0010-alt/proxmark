@@ -11,7 +11,7 @@ public sealed class BwmEventDispatcher
 
     public void Dispatch(BwmFrame frame)
     {
-        if (frame.IsBroadcast)
+        if (frame.Kind == BwmFrameKind.Broadcast)
             BroadcastReceived?.Invoke(frame);
     }
 }
