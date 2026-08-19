@@ -1,0 +1,22 @@
+# .NET
+bin/
+obj/
+.vs/
+*.user
+*.suo
+
+# IDE
+.idea/
+.vscode/
+
+# Build output
+artifacts/
+
+# Local device reports/backups - never commit by default
+local-data/
+backups/
+reports/local/
+
+# OS
+.DS_Store
+Thumbs.db
