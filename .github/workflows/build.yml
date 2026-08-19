@@ -33,7 +33,7 @@ jobs:
         run: dotnet restore tests/PM5Control.Core.Tests/PM5Control.Core.Tests.csproj
 
       - name: Build Release
-        run: dotnet build src/PM5Control.Core/PM5Control.Core.csproj --configuration Release --no-restore
+        run: dotnet build tests/PM5Control.Core.Tests/PM5Control.Core.Tests.csproj --configuration Release --no-restore
 
       - name: Test Release
         run: dotnet test tests/PM5Control.Core.Tests/PM5Control.Core.Tests.csproj --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" --results-directory TestResults
