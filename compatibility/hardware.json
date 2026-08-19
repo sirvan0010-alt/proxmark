@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "purpose": "Evidence-backed Proxmark5 hardware compatibility registry",
+  "entries": [],
+  "notes": [
+    "Do not add a hardware revision, VID, PID or memory value until it is supported by reliable evidence.",
+    "The first physical PM5 session should create the first observed entry.",
+    "Expected compatibility values must never be presented as detected values."
+  ]
+}
