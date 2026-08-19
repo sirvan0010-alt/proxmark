@@ -1,10 +1,46 @@
-# Architecture
+# PM5 Control Center Architecture
 
 ## Design objective
 
 The application is a device-aware client, not merely a GUI wrapper around a terminal window.
 
-The UI must not contain Proxmark protocol logic. Protocol details belong in adapters/services so that Windows and Android can share the same core.
+The UI must not contain Proxmark protocol logic. Protocol details belong in adapters/services so that Windows, Ubuntu CLI and future Android clients can share the same core.
+
+The first user experience should be automatic and read-only:
+
+```text
+Connect PM5
+   ↓
+Auto-detect transport
+   ↓
+Identify device
+   ↓
+Probe supported read-only information
+   ↓
+Collect ARM / FPGA / ESP32-BWM / capabilities / power
+   ↓
+Compare against known compatibility data
+   ↓
+Generate human + machine readable report
+```
+
+A failed or unsupported probe becomes an explicit `UNKNOWN`/`UNSUPPORTED` result; the inspector must continue with independent probes whenever the transport remains usable.
+
+## Why C# / .NET 10
+
+The shared implementation is C#/.NET 10. The repository already contains `PM5Control.Core` targeting `net10.0`. fileciteturn192file0
+
+This choice is deliberate:
+
+- **Windows-first:** the main desktop client can use the mature .NET ecosystem for native desktop integration, asynchronous I/O, networking, serial/USB-adjacent APIs and structured diagnostics.
+- **Strong typing:** protocol frames, enums, DTOs, capability models and transport interfaces benefit from compile-time checking. This is particularly important when one incorrect field or CRC calculation can produce a false hardware diagnosis.
+- **Shared Core:** protocol, diagnostics and compatibility logic can remain independent of the Windows UI and be reused by the Ubuntu CLI and later clients.
+- **Testing:** .NET has a mature unit/integration testing ecosystem and works naturally with the existing GitHub Actions pipeline.
+- **Maintainability:** the project is intended to become a long-lived open-source client, not a disposable reverse-engineering script.
+
+Python is still appropriate for optional research scripts and one-off protocol experiments, but it is not the primary implementation. TypeScript/Electron is likewise not the primary architecture because the central engineering problem is hardware/protocol integration rather than a web application. A future web-based UI remains possible if it provides a concrete benefit.
+
+Android is a later milestone. We will not claim complete code sharing until the real PM5 transport and BWM interfaces have been verified.
 
 ## Layers
 
@@ -45,24 +81,75 @@ The UI must not contain Proxmark protocol logic. Protocol details belong in adap
 +------------------------------------------------------+
 ```
 
+The current Core source tree already separates `Connections`, `Devices`, `Diagnostics` and `Protocols`, providing the intended foundation. fileciteturn191file0
+
+## Hardware model
+
+The project is specifically about a **Proxmark5-class device with a main ARM/FPGA/RF subsystem and an ESP32/BWM subsystem** as described by the current project specification. We must not assume every physical revision exposes every feature.
+
+The following areas are tracked independently:
+
+### Main PM5
+
+- hardware model/revision
+- device identity
+- USB identity
+- ARM firmware
+- FPGA image/version
+- memory where reliably verifiable
+- RF capabilities
+
+### ESP32/BWM
+
+- ESP32/MCU model
+- BWM firmware/build
+- MAC
+- Wi-Fi
+- BLE
+- TCP/UDP
+- MQTT
+- OTA capability
+- free heap/RAM
+- uptime
+- NVS/system information
+- logs/readiness
+
+### Power
+
+- external power
+- battery presence
+- voltage
+- current/charge state
+- charging
+- temperature
+- percentage only if a reliable gauge exposes it
+
+Unavailable telemetry is `UNKNOWN`, never guessed.
+
 ## Device Inspector
 
 The Inspector is the first production component. It must gather information without requiring manual CLI entry.
 
-Responsibilities:
+### Automatic discovery sequence
 
-- discover transports
-- identify device
-- query firmware versions
-- query hardware capabilities
-- collect memory information
-- inspect BWM/ESP32 state
-- inspect power/battery telemetry
-- compare results against compatibility data
-- assign source states and confidence
-- create reports
+```text
+1. Enumerate candidate transports
+2. Identify candidate PM5 device
+3. Establish the least invasive supported connection
+4. Query identity/version information
+5. Discover supported read-only capabilities
+6. Query main PM5 information
+7. Query BWM/ESP32 information if available
+8. Query wireless state/capabilities where supported
+9. Query power/battery telemetry where supported
+10. Run compatibility checks
+11. Generate baseline + diagnostic report
+12. Disconnect cleanly
+```
 
-The Inspector should be able to run in a read-only mode.
+The sequence is data-driven rather than hard-coded around one firmware version. Each probe has a timeout, parser, expected evidence and read-only classification.
+
+One failed probe must not cause the inspector to invent a value or unnecessarily abort unrelated diagnostics.
 
 ## Compatibility Engine
 
@@ -73,7 +160,7 @@ The Compatibility Engine must answer questions such as:
 - Is the BWM firmware compatible with the available network functions?
 - Which features are verified, unsupported, unknown or experimental?
 
-It must explain why it reached a result.
+It must explain why it reached a result and record the source revision/date.
 
 ## Protocol adapters
 
@@ -86,8 +173,6 @@ The BWM/ESP32 interface is a separate adapter because its lifecycle, networking 
 ## Transport abstraction
 
 The same logical request should not care whether the device is connected by USB, BLE or TCP.
-
-Example conceptual flow:
 
 ```text
 GetDeviceInfo()
@@ -103,9 +188,7 @@ The transport layer returns structured data/errors rather than terminal text whe
 
 ## BWM framing and asynchronous events
 
-The current upstream BWM documentation describes a binary packet protocol rather than a text command stream. The protocol has separate request, response and broadcast frame markers and a CRC16-CCITT integrity check.
-
-The exact constants must remain versioned because the PM5/BWM firmware is actively evolving.
+The current project documentation describes a binary BWM packet layer with request/response/broadcast concepts and CRC validation. Exact constants and command IDs must remain versioned because PM5/BWM software is evolving.
 
 The communication engine must support both:
 
@@ -117,7 +200,7 @@ and
 unsolicited broadcast -> event dispatcher
 ```
 
-Examples of events include Wi-Fi scan results, forwarded data and system/log messages. Therefore a single `SendAndWaitForReply()` abstraction is not sufficient.
+These are architectural requirements; exact PM5-specific commands must be verified from source or real hardware before being labelled supported.
 
 ## Suggested conceptual interfaces
 
@@ -160,24 +243,15 @@ Protocol/Firmware version
 Evidence
 ```
 
-This is important for resolving cases such as firmware reporting 512 KiB while a known hardware revision expects another value.
-
 ## Reports
 
-Reports should have both:
-
-1. human-readable Markdown/text output;
-2. machine-readable JSON output.
-
-The report must include client version, timestamp, hardware identity, firmware versions, transport, capabilities, power state where available, compatibility results and warnings.
+Reports should have both human-readable Markdown and machine-readable JSON output. The report must include client version, timestamp, hardware identity, firmware versions, transport, capabilities, power state where available, compatibility results, warnings and evidence.
 
 ## Firmware manager
 
-The Firmware Manager is deliberately separated from diagnostics.
+The Firmware Manager is deliberately separated from diagnostics. Diagnostics can be read-only. Firmware changes are privileged actions with explicit confirmation and a verified backup mechanism.
 
-Diagnostics can be read-only. Firmware changes are privileged actions with explicit confirmation and a backup check.
-
-Never automatically update firmware simply because a newer version exists.
+Never automatically update firmware merely because a newer version exists.
 
 ## Network architecture
 
@@ -188,12 +262,12 @@ Windows / Android
        |
        +---- USB / BLE / TCP ----> BWM
                                       |
-                                      | UART
+                                      | UART/internal link
                                       v
                                     PM5
 ```
 
-For remote operation over the Internet, prefer a private VPN/overlay network rather than exposing the BWM TCP listener directly to the public Internet.
+For remote operation over the Internet, prefer a private VPN/overlay network rather than exposing an unverified BWM TCP listener directly to the public Internet.
 
 ## Test architecture
 
@@ -208,13 +282,15 @@ Minimum test layers:
 5. asynchronous event tests
 6. transport mock tests
 7. compatibility-rule tests
-8. golden-frame tests based on verified upstream material
+8. golden-frame tests based on verified material
 9. real-device integration tests
 
-Every report/test should clearly identify whether it was produced by simulation or real hardware.
+Every report/test must clearly identify simulation versus physical hardware evidence.
 
 ## Future automation
 
-Automation will be built above the protocol layer. A workflow should be able to express device operations without embedding raw CLI strings throughout the application.
+Automation is built above the protocol layer. Workflows express device operations without scattering raw CLI strings throughout the application. This makes workflows easier to maintain when upstream command syntax changes and allows the same logical operations to be surfaced by Windows, Ubuntu and Android clients.
 
-This makes workflows portable between Windows and Android and reduces breakage when upstream command syntax changes.
+## Design rule
+
+**The UI should be simple because the Core is well structured, not because the Core hides uncertainty.**
