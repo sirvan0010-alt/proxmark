@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sirvan0010-alt/proxmark/blob/main/docs/DIAGNOSTIC_SCHEMA.json",
+  "title": "PM5 Control Center Diagnostic Report",
+  "description": "Machine-readable read-only diagnostic report. Unknown or unavailable hardware values must not be fabricated.",
+  "type": "object",
+  "required": ["schemaVersion", "generatedAt", "client", "device", "diagnostics"],
+  "properties": {
+    "schemaVersion": {"type": "string"},
+    "generatedAt": {"type": "string", "format": "date-time"},
+    "client": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": {"type": "string"},
+        "version": {"type": "string"},
+        "commit": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "host": {
+      "type": ["object", "null"],
+      "properties": {
+        "os": {"type": ["string", "null"]},
+        "architecture": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "device": {
+      "type": "object",
+      "required": ["sourceState", "confidence"],
+      "properties": {
+        "model": {"type": ["string", "null"]},
+        "hardwareRevision": {"type": ["string", "null"]},
+        "serial": {"type": ["string", "null"]},
+        "usbVid": {"type": ["string", "null"]},
+        "usbPid": {"type": ["string", "null"]},
+        "sourceState": {"$ref": "#/$defs/sourceState"},
+        "confidence": {"$ref": "#/$defs/confidence"}
+      },
+      "additionalProperties": true
+    },
+    "firmware": {"$ref": "#/$defs/componentInfo"},
+    "fpga": {"$ref": "#/$defs/componentInfo"},
+    "bwm": {"$ref": "#/$defs/bwmInfo"},
+    "capabilities": {"type": "array", "items": {"type": "string"}},
+    "transport": {"$ref": "#/$defs/transportInfo"},
+    "power": {"$ref": "#/$defs/powerInfo"},
+    "compatibility": {"$ref": "#/$defs/compatibilityInfo"},
+    "probes": {"type": "array", "items": {"$ref": "#/$defs/probe"}},
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "diagnostics": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": {"type": "string"},
+        "readOnly": {"type": "boolean"},
+        "errors": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "sourceState": {"type": "string", "enum": ["DETECTED", "REPORTED", "EXPECTED", "UNKNOWN"]},
+    "confidence": {"type": "string", "enum": ["HIGH", "MEDIUM", "LOW", "UNKNOWN"]},
+    "componentInfo": {
+      "type": "object",
+      "properties": {
+        "version": {"type": ["string", "null"]},
+        "build": {"type": ["string", "null"]},
+        "commit": {"type": ["string", "null"]},
+        "sourceState": {"$ref": "#/$defs/sourceState"},
+        "confidence": {"$ref": "#/$defs/confidence"}
+      },
+      "additionalProperties": true
+    },
+    "bwmInfo": {
+      "type": "object",
+      "properties": {
+        "model": {"type": ["string", "null"]},
+        "version": {"type": ["string", "null"]},
+        "mac": {"type": ["string", "null"]},
+        "freeHeap": {"type": ["integer", "null"]},
+        "uptimeSeconds": {"type": ["integer", "null"]},
+        "sourceState": {"$ref": "#/$defs/sourceState"},
+        "confidence": {"$ref": "#/$defs/confidence"}
+      },
+      "additionalProperties": true
+    },
+    "transportInfo": {
+      "type": "object",
+      "properties": {
+        "type": {"type": ["string", "null"]},
+        "interface": {"type": ["string", "null"]},
+        "sourceState": {"$ref": "#/$defs/sourceState"},
+        "confidence": {"$ref": "#/$defs/confidence"}
+      },
+      "additionalProperties": true
+    },
+    "powerInfo": {
+      "type": "object",
+      "properties": {
+        "externalPower": {"type": ["boolean", "null"]},
+        "batteryPresent": {"type": ["boolean", "null"]},
+        "voltage": {"type": ["number", "null"]},
+        "current": {"type": ["number", "null"]},
+        "temperature": {"type": ["number", "null"]},
+        "percentage": {"type": ["number", "null"]},
+        "sourceState": {"$ref": "#/$defs/sourceState"},
+        "confidence": {"$ref": "#/$defs/confidence"}
+      },
+      "additionalProperties": true
+    },
+    "compatibilityInfo": {
+      "type": "object",
+      "properties": {
+        "status": {"type": "string", "enum": ["VERIFIED", "SUPPORTED", "PARTIAL", "UNKNOWN", "MISMATCH", "UNSUPPORTED", "EXPERIMENTAL"]},
+        "messages": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": true
+    },
+    "probe": {
+      "type": "object",
+      "required": ["name", "status"],
+      "properties": {
+        "name": {"type": "string"},
+        "status": {"type": "string"},
+        "sentHex": {"type": ["string", "null"]},
+        "receivedHex": {"type": ["string", "null"]},
+        "latencyMs": {"type": ["number", "null"]},
+        "retries": {"type": "integer", "minimum": 0},
+        "timestamp": {"type": ["string", "null"], "format": "date-time"},
+        "sourceState": {"$ref": "#/$defs/sourceState"},
+        "confidence": {"$ref": "#/$defs/confidence"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}
