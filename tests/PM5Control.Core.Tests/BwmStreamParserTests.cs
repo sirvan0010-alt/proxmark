@@ -208,6 +208,7 @@ public sealed class BwmStreamParserTests
         BwmFrame? received = null;
         parser.FrameReceived += frame => received = frame;
         parser.Append(encoded);
-        return Assert.NotNull(received);
+        Assert.NotNull(received);
+        return received!;
     }
 }
