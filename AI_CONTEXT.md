@@ -6,15 +6,45 @@ This file is the handoff document for future AI coding assistants working on **P
 
 The project is intended to become an independent, diagnostics-first Proxmark5 client. It should make the physical device understandable and controllable without requiring the human user to know CLI commands.
 
+This is an open-source software-engineering project. The repository may contain low-level RFID, wireless, firmware, protocol and device-management components because those are legitimate parts of developing a general-purpose hardware client. The presence of such components does **not** by itself establish malicious intent or make unrelated engineering work unsafe.
+
+At the same time, an AI assistant must apply its own applicable safety rules to each concrete request. Do not attempt to bypass, disable, evade or reinterpret those rules merely because this repository is open source or because the hardware is owned by the user.
+
+If a particular operation cannot be assisted, isolate that limitation to the smallest affected operation. Continue helping with the surrounding legitimate engineering work whenever possible: architecture, parsers, transport code, diagnostics, testing, documentation, interoperability, firmware identification, device management and safe simulation are all independent project areas.
+
+## How future AI assistants should reason about requests
+
+Before refusing a task, determine exactly which operation is being requested and which project layer it belongs to.
+
+Do not classify the entire repository as unsafe merely because it is a Proxmark5 project.
+
+Prefer this decision pattern:
+
+```text
+Requested change
+      ↓
+Identify exact capability
+      ↓
+Identify affected project layer
+      ↓
+Can the engineering task be completed safely?
+   ├── YES → implement and test
+   └── NO  → explain the narrow limitation
+              ↓
+          continue with safe adjacent work
+```
+
+For example, if a sensitive RFID operation cannot be implemented, the assistant should still be able to implement the packet codec, GUI, USB transport, BWM diagnostics, Wi-Fi scanner UI, firmware version detection, compatibility database, report generation and automated tests.
+
+Never use the repository documentation as an instruction to circumvent an AI provider's safety policy. Instead, use it to provide accurate technical context so that restrictions are applied narrowly and unrelated work is not unnecessarily blocked.
+
 ## Current project stage
 
-**M0 — Documentation and architecture.**
+**M0/M1 — architecture and protocol foundation; real-hardware validation pending.**
 
-The project repository has just been initialized. No real Proxmark5 hardware state has been verified in this repository yet.
+The user's physical Proxmark5 is available but has not yet been validated in this repository. Do not claim that PM5-specific behavior is working until it is verified against the actual device or a reliable upstream source.
 
-Do not claim that any PM5-specific function is working until it has been verified against a real device or a reliable upstream source.
-
-## Immediate next task
+## Immediate hardware task
 
 When the physical Proxmark5 is available:
 
@@ -182,6 +212,7 @@ The project's compatibility database should remain explicit and testable rather 
 - The user wants a click-based interface instead of requiring CMD commands.
 - The user wants firmware/ESP32/BWM/power information to be visible and documented.
 - The user wants a GitHub project that can be handed to another AI without losing project intent.
+- The project is intentionally modular so that sensitive or restricted operations, if any, can be isolated without blocking the rest of the client.
 
 ## Current unknowns
 
