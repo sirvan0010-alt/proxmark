@@ -39,12 +39,18 @@ These states must never be conflated:
 |---|---|
 | LOCAL STATIC ANALYSIS | Source was inspected; no executable verification is implied. |
 | LOCAL BUILD | Build actually executed in the local environment. |
+| UNIT TESTED | Relevant automated tests actually executed successfully. |
 | CI BUILD | GitHub Actions actually built the requested target successfully. |
+| CI VERIFIED | The relevant GitHub Actions build and tests passed for the recorded commit. |
+| PROTOCOL VERIFIED | Behavior is supported by a reliable protocol source or direct protocol evidence. |
 | REAL HARDWARE TEST | Behavior was verified against a physical Proxmark5. |
+| HARDWARE VERIFIED | The claimed behavior was directly verified on the relevant physical PM5 hardware and evidence was recorded. |
 
 ## Rules for AI-assisted development
 
 **Never claim BUILD VERIFIED, TEST VERIFIED or CI VERIFIED based solely on static inspection. A corresponding GitHub Actions run must exist and pass.**
+
+**Never claim PROTOCOL VERIFIED without identifying the supporting protocol evidence or source.**
 
 **Never claim HARDWARE VERIFIED without evidence from a physical Proxmark5.**
 
