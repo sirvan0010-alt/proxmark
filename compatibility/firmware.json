@@ -1,10 +1,29 @@
 {
-  "schema_version": 1,
-  "purpose": "Evidence-backed Proxmark5 firmware compatibility registry",
+  "schema_version": 2,
+  "purpose": "Evidence-backed firmware compatibility registry",
   "entries": [],
+  "selection_fields": [
+    "hardware_family",
+    "hardware_revision",
+    "firmware_component",
+    "firmware_version",
+    "source_repository",
+    "source_commit",
+    "source_date",
+    "compatibility_status"
+  ],
+  "human_selection_policy": {
+    "step_1": "Identify the physical device family and exact revision.",
+    "step_2": "Identify current ARM/FPGA/BWM firmware versions.",
+    "step_3": "Compare each component against this registry.",
+    "step_4": "Explain mismatches in plain language.",
+    "step_5": "Only present firmware packages whose hardware compatibility is established.",
+    "step_6": "Require explicit confirmation before any firmware-changing operation."
+  },
   "notes": [
     "Do not populate firmware versions from guesses or PM3 assumptions.",
     "Record exact firmware identifiers and evidence when observed or sourced from a reliable upstream reference.",
-    "Compatibility status and detected device state are separate concepts."
+    "Compatibility status and detected device state are separate concepts.",
+    "A PM3 firmware package must never be recommended for PM5 solely because the repositories share protocol code."
   ]
 }
