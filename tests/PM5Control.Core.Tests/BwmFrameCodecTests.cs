@@ -18,6 +18,22 @@ public class BwmFrameCodecTests
     }
 
     [Fact]
+    public void RequestEncodingMatchesVerifiedFirmwareCrcVector()
+    {
+        // Firmware framing: magic C77C, command 0x1234, length 4,
+        // payload 01 02 AA 55. CRC is calculated over all bytes before
+        // the CRC field, including the two magic bytes, and serialized
+        // little-endian. Verified against RfidResearchGroup/Proxmark5_BWM_esp32
+        // commit b918166128e05455c2dcb4e232216d453bbf29ee,
+        // components/app_uart_cmd/app_cmd_uart.c (uart_build_and_send).
+        var encoded = BwmFrameCodec.EncodeRequest(0x1234, new byte[] { 0x01, 0x02, 0xAA, 0x55 });
+
+        var expected = Convert.FromHexString("7CC7341204000102AA55BF70");
+
+        Assert.Equal(expected, encoded);
+    }
+
+    [Fact]
     public void CorruptedCrcIsRejected()
     {
         var encoded = BwmFrameCodec.EncodeRequest(0x0001, new byte[] { 0x10, 0x20 });
