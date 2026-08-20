@@ -6,35 +6,28 @@ The diagnostic report is the stable boundary between the Inspector and humans, a
 
 It must preserve uncertainty instead of hiding it.
 
-## Output formats
+## Implemented runtime schema vs. future target
 
-The Inspector will eventually export:
+There are deliberately two layers:
 
-- JSON for machine processing;
-- Markdown for humans;
-- raw evidence/log files where appropriate.
+- `docs/DIAGNOSTIC_RUNTIME_SCHEMA.json` describes the **currently implemented** `DiagnosticReport` C# model and is the schema exported by `pm5ctl export-schema`.
+- `docs/DIAGNOSTIC_SCHEMA.json` describes the **planned hardware-oriented report shape**. It must not be treated as proof that every listed PM5 field is currently implemented or exposed by hardware.
 
-The exact JSON Schema should be generated after the first real PM5 session, when we know which fields the hardware actually exposes. This document defines the semantic contract without inventing hardware fields.
+This separation prevents the documentation from claiming a runtime contract that the current code does not actually emit.
 
-## Top-level structure
+The hardware-oriented schema can be promoted or revised after the first real PM5 session, when we know which fields the device actually exposes.
+
+## Current runtime structure
 
 ```text
 DiagnosticReport
- ├─ schemaVersion
- ├─ reportId
- ├─ timestamp
- ├─ client
- ├─ host
- ├─ device
- ├─ transport
- ├─ firmware
- ├─ bwm
- ├─ capabilities
- ├─ power
- ├─ compatibility
- ├─ probes
- ├─ warnings
+ ├─ createdAt
+ ├─ toolVersion
+ ├─ softwareCommit
+ ├─ values
+ │   └─ DiagnosticValue<T>
  └─ evidence
+     └─ DiagnosticEvidence
 ```
 
 ## Diagnostic field
@@ -47,58 +40,49 @@ DiagnosticValue<T>
  ├─ sourceState
  ├─ confidence
  ├─ sourceDescription
- ├─ timestamp
- ├─ protocolVersion
- ├─ firmwareVersion
- └─ evidence
+ └─ timestamp
 ```
 
 `sourceState` is one of:
 
 ```text
-DETECTED
-REPORTED
-EXPECTED
-UNKNOWN
+Detected
+Reported
+Expected
+Unknown
 ```
 
 `confidence` is one of:
 
 ```text
-HIGH
-MEDIUM
-LOW
-UNKNOWN
+High
+Medium
+Low
+Unknown
 ```
 
-## Probe result
+The runtime serializer currently uses the C# enum names. Human-facing documentation may render these as uppercase labels, but the machine schema must match the actual serialized representation.
 
-Each automatic probe should record:
+## Evidence chain
+
+Each evidence record currently preserves:
 
 ```text
-ProbeResult
- ├─ probeId
- ├─ category
- ├─ status
- ├─ durationMs
- ├─ sourceState
+DiagnosticEvidence
+ ├─ timestamp
+ ├─ probe
+ ├─ transport
+ ├─ request
+ ├─ response
+ ├─ parsedResult
+ ├─ latencyMs
+ ├─ retries
+ ├─ source
  ├─ confidence
- ├─ values
- ├─ error
- └─ evidence
+ └─ softwareCommit
 ```
 
-Possible status values:
-
-```text
-SUCCESS
-UNSUPPORTED
-TIMEOUT
-TRANSPORT_ERROR
-MALFORMED_RESPONSE
-PERMISSION_ERROR
-UNKNOWN
-```
+This is intentionally independent from the future hardware-oriented `ProbeResult` model. The evidence chain is the provenance record; the future inspector model may build richer probe summaries around it.
 
 ## Important rule
 
@@ -112,7 +96,7 @@ ERROR        = the operation should have worked but failed
 
 ## Baseline identity
 
-The report should record enough information to compare repeated sessions:
+The eventual hardware report should record enough information to compare repeated sessions:
 
 - repository/client version;
 - report schema version;
@@ -131,11 +115,11 @@ Reports must not automatically include secrets such as Wi-Fi passwords, private 
 
 ## Versioning
 
-`schemaVersion` is independent from PM5 firmware versions. A report schema change must be documented so old reports remain interpretable.
+The runtime schema and the hardware-oriented schema are independent from PM5 firmware versions. Any promoted schema change must be documented so old reports remain interpretable.
 
 ## Hardware-first rule
 
-Do not finalize a field as a required PM5 hardware field merely because it appears in an early design document. After the first real PM5 session, fields will be classified as:
+Do not finalize a field as a required PM5 hardware field merely because it appears in the planned schema. After the first real PM5 session, fields will be classified as:
 
 - verified and supported;
 - optional;
