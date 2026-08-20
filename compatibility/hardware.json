@@ -1,10 +1,44 @@
 {
-  "schema_version": 1,
-  "purpose": "Evidence-backed Proxmark5 hardware compatibility registry",
+  "schema_version": 2,
+  "purpose": "Evidence-backed hardware compatibility registry with human-readable family comparison",
   "entries": [],
+  "families": {
+    "PM5": {
+      "display_name": "Proxmark5",
+      "status": "HARDWARE_ID_PENDING",
+      "human_summary": "Newer PM5 hardware family. The exact board revision, USB identifiers and subsystem versions must be detected from the physical device before firmware selection.",
+      "firmware_rule": "Never select a firmware package solely because it appears in a Proxmark3 repository. Resolve the exact PM5 hardware identity first."
+    },
+    "PM3": {
+      "display_name": "Proxmark3 family",
+      "status": "REFERENCE_ONLY",
+      "human_summary": "Legacy/reference family used by the RfidResearchGroup proxmark3 software ecosystem. It is a compatibility reference, not proof of PM5 compatibility.",
+      "firmware_rule": "PM3 firmware is not assumed to be compatible with PM5. Reusable protocol code must be verified independently."
+    }
+  },
+  "comparison_fields": [
+    "family",
+    "hardware_revision",
+    "usb_vid",
+    "usb_pids",
+    "arm_firmware",
+    "fpga_firmware",
+    "bwm_firmware",
+    "transport_capabilities",
+    "power_capabilities"
+  ],
   "notes": [
     "Do not add a hardware revision, VID, PID or memory value until it is supported by reliable evidence.",
     "The first physical PM5 session should create the first observed entry.",
-    "Expected compatibility values must never be presented as detected values."
+    "Expected compatibility values must never be presented as detected values.",
+    "The UI should explain differences in human terms, not only show hexadecimal identifiers."
+  ],
+  "selection_pipeline": [
+    "Detect USB/device identity",
+    "Determine hardware family and exact revision",
+    "Read current firmware/subsystem versions",
+    "Compare against compatibility registry",
+    "Show compatible/incompatible/unknown result",
+    "Only then offer a matching firmware package"
   ]
 }
