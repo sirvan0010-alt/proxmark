@@ -6,35 +6,36 @@
  */
 
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace PM5Control.Core.Compatibility;
 
 public sealed record CompatibilityRegistry(
-    int SchemaVersion,
+    [property: JsonPropertyName("schema_version")] int SchemaVersion,
     string Purpose,
     IReadOnlyList<CompatibilityEntry> Entries,
     IReadOnlyDictionary<string, CompatibilityFamily> Families,
-    IReadOnlyList<string> ComparisonFields,
+    [property: JsonPropertyName("comparison_fields")] IReadOnlyList<string> ComparisonFields,
     IReadOnlyList<string> Notes,
-    IReadOnlyList<string> SelectionPipeline);
+    [property: JsonPropertyName("selection_pipeline")] IReadOnlyList<string> SelectionPipeline);
 
 public sealed record CompatibilityEntry(
     string? Id,
     string? Family,
-    string? HardwareRevision,
-    string? UsbVid,
-    IReadOnlyList<string>? UsbPids,
-    string? ArmFirmware,
-    string? FpgaFirmware,
-    string? BwmFirmware,
+    [property: JsonPropertyName("hardware_revision")] string? HardwareRevision,
+    [property: JsonPropertyName("usb_vid")] string? UsbVid,
+    [property: JsonPropertyName("usb_pids")] IReadOnlyList<string>? UsbPids,
+    [property: JsonPropertyName("arm_firmware")] string? ArmFirmware,
+    [property: JsonPropertyName("fpga_firmware")] string? FpgaFirmware,
+    [property: JsonPropertyName("bwm_firmware")] string? BwmFirmware,
     string? Status,
     string? Evidence);
 
 public sealed record CompatibilityFamily(
-    string DisplayName,
+    [property: JsonPropertyName("display_name")] string DisplayName,
     string Status,
-    string HumanSummary,
-    string FirmwareRule);
+    [property: JsonPropertyName("human_summary")] string HumanSummary,
+    [property: JsonPropertyName("firmware_rule")] string FirmwareRule);
 
 public static class CompatibilityRegistryLoader
 {
