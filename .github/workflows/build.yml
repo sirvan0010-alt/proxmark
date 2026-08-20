@@ -35,11 +35,17 @@ jobs:
       - name: Restore CLI
         run: dotnet restore src/PM5Control.Cli/PM5Control.Cli.csproj
 
+      - name: Restore simulator
+        run: dotnet restore src/PM5Control.Simulator/PM5Control.Simulator.csproj
+
       - name: Build Release tests
         run: dotnet build tests/PM5Control.Core.Tests/PM5Control.Core.Tests.csproj --configuration Release --no-restore
 
       - name: Build Release CLI
         run: dotnet build src/PM5Control.Cli/PM5Control.Cli.csproj --configuration Release --no-restore
+
+      - name: Build Release simulator
+        run: dotnet build src/PM5Control.Simulator/PM5Control.Simulator.csproj --configuration Release --no-restore
 
       - name: Test Release
         run: dotnet test tests/PM5Control.Core.Tests/PM5Control.Core.Tests.csproj --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" --results-directory TestResults
