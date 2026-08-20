@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sirvan0010-alt/proxmark/blob/main/docs/DIAGNOSTIC_RUNTIME_SCHEMA.json",
+  "title": "PM5 Control Center Runtime DiagnosticReport",
+  "description": "JSON Schema for the DiagnosticReport object currently emitted by PM5Control.Core. This schema describes the implemented runtime model; it does not claim that every PM5 hardware field is available.",
+  "type": "object",
+  "required": ["createdAt", "toolVersion", "softwareCommit", "values", "evidence"],
+  "properties": {
+    "createdAt": {"type": "string", "format": "date-time"},
+    "toolVersion": {"type": "string"},
+    "softwareCommit": {"type": ["string", "null"]},
+    "values": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/diagnosticValue"}
+    },
+    "evidence": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/evidence"}
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "sourceState": {
+      "type": "string",
+      "enum": ["Detected", "Reported", "Expected", "Unknown"]
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["High", "Medium", "Low", "Unknown"]
+    },
+    "diagnosticValue": {
+      "type": "object",
+      "required": ["value", "sourceState", "confidence", "sourceDescription", "timestamp"],
+      "properties": {
+        "value": {},
+        "sourceState": {"$ref": "#/$defs/sourceState"},
+        "confidence": {"$ref": "#/$defs/confidence"},
+        "sourceDescription": {"type": "string"},
+        "timestamp": {"type": "string", "format": "date-time"}
+      },
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object",
+      "required": [
+        "timestamp", "probe", "transport", "request", "response",
+        "parsedResult", "latencyMs", "retries", "source", "confidence", "softwareCommit"
+      ],
+      "properties": {
+        "timestamp": {"type": "string", "format": "date-time"},
+        "probe": {"type": "string"},
+        "transport": {"type": ["string", "null"]},
+        "request": {"type": ["string", "null"]},
+        "response": {"type": ["string", "null"]},
+        "parsedResult": {"type": ["string", "null"]},
+        "latencyMs": {"type": ["number", "null"]},
+        "retries": {"type": "integer", "minimum": 0},
+        "source": {"type": "string"},
+        "confidence": {"$ref": "#/$defs/confidence"},
+        "softwareCommit": {"type": "string"}
+      },
+      "additionalProperties": false
+    }
+  }
+}
