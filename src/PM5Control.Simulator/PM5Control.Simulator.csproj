@@ -6,4 +6,7 @@
     <RootNamespace>PM5Control.Simulator</RootNamespace>
     <AssemblyName>PM5Control.Simulator</AssemblyName>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../PM5Control.Core/PM5Control.Core.csproj" />
+  </ItemGroup>
 </Project>
