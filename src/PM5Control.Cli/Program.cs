@@ -1,7 +1,7 @@
 // PM5 Control Center — Ubuntu/Linux CLI
 // Purpose: thin cross-platform command surface over PM5Control.Core.
 // This CLI must remain transport-neutral: hardware I/O belongs in Core.
-// See docs/ARCHITECTURE.md, docs/DIAGNOSTIC_SCHEMA.md and
+// See docs/DIAGNOSTIC_SCHEMA.md, docs/DIAGNOSTIC_RUNTIME_SCHEMA.json and
 // docs/AI_PROGRESS_WORKFLOW.md before extending this file.
 
 using System;
@@ -12,7 +12,7 @@ namespace PM5Control.Cli;
 internal static class Program
 {
     private const string Version = "0.1.0-dev";
-    private const string SchemaPath = "docs/DIAGNOSTIC_SCHEMA.json";
+    private const string RuntimeSchemaPath = "docs/DIAGNOSTIC_RUNTIME_SCHEMA.json";
 
     private static int Main(string[] args)
     {
@@ -51,7 +51,7 @@ internal static class Program
     {
         var path = args.Length switch
         {
-            0 => SchemaPath,
+            0 => RuntimeSchemaPath,
             1 => args[0],
             _ => null
         };
@@ -64,7 +64,7 @@ internal static class Program
 
         if (!File.Exists(path))
         {
-            Console.Error.WriteLine($"Diagnostic schema not found: {path}");
+            Console.Error.WriteLine($"Runtime diagnostic schema not found: {path}");
             Console.Error.WriteLine("Run this command from the repository root, or provide the schema path explicitly.");
             return 2;
         }
