@@ -5,6 +5,7 @@
 // SAFETY: accepts framed requests and returns only simulated responses; it
 // never opens USB/BLE/Wi-Fi and never changes physical device state.
 
+using System.Buffers.Binary;
 using System.Text;
 using PM5Control.Core.Connections;
 using PM5Control.Core.Protocols.Bwm;
@@ -22,7 +23,7 @@ public sealed class BwmSimulatedTransport : IProxmarkTransport
     public string Model { get; set; } = "SIMULATED-PM5-BWM";
     public string CompileDatetime { get; set; } = "SIMULATED-DATE";
     public uint FreeHeap { get; set; } = 65536;
-    public byte[] BaseMac { get; set; } = { 0x02, 0x00, 0x00, 0x00, 0x00, 0x01 };
+    public byte[] BaseMac { get; set; } = new byte[] { 0x02, 0x00, 0x00, 0x00, 0x00, 0x01 };
 
     public Task ConnectAsync(CancellationToken cancellationToken = default)
     {
@@ -54,13 +55,20 @@ public sealed class BwmSimulatedTransport : IProxmarkTransport
             BwmCommandCode.GetVersionInfo => Encoding.UTF8.GetBytes(Version + "\0"),
             BwmCommandCode.GetDeviceModel => Encoding.UTF8.GetBytes(Model + "\0"),
             BwmCommandCode.GetAppCompileDatetime => Encoding.UTF8.GetBytes(CompileDatetime + "\0"),
-            BwmCommandCode.GetSysFreeHeap => BitConverter.GetBytes(FreeHeap),
+            BwmCommandCode.GetSysFreeHeap => EncodeUInt32LittleEndian(FreeHeap),
             BwmCommandCode.GetSysBaseMacAddr when BaseMac.Length == 6 => BaseMac.ToArray(),
             _ => Array.Empty<byte>()
         };
 
         var response = BwmFrameCodec.EncodeResponse(frame.CommandId, payload);
         return Task.FromResult(response);
+    }
+
+    private static byte[] EncodeUInt32LittleEndian(uint value)
+    {
+        var bytes = new byte[sizeof(uint)];
+        BinaryPrimitives.WriteUInt32LittleEndian(bytes, value);
+        return bytes;
     }
 
     public ValueTask DisposeAsync()
