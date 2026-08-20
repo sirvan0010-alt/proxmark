@@ -2,33 +2,47 @@
 
 ## M0 — Foundation
 
-Status: **in progress**
+Status: **complete in repository; verification remains evidence-based**
 
-- project purpose
-- AI continuation context
-- architecture
-- compatibility model
-- upstream research snapshots
-- staged test plan
+- [x] project purpose
+- [x] AI continuation context
+- [x] architecture
+- [x] compatibility model
+- [x] upstream research snapshots
+- [x] staged test plan
+- [x] AI progressive-engineering workflow
+- [x] simulator contract and evidence rules
 
 ## M1 — PM5 Inspector Core
 
 Goal: inspect a real device without CLI knowledge.
 
-- [ ] solution/project structure
-- [ ] diagnostic value model
-- [ ] transport abstraction
-- [ ] stream/framing layer
-- [ ] BWM packet codec
-- [ ] CRC implementation
-- [ ] response correlation
-- [ ] asynchronous event dispatcher
-- [ ] compatibility database loader
-- [ ] diagnostic report schema
+### Implemented foundation
+
+- [x] solution/project structure
+- [x] diagnostic value model
+- [x] transport abstraction
+- [x] stream/framing layer
+- [x] BWM packet codec
+- [x] CRC implementation
+- [x] response correlation primitives
+- [x] asynchronous event dispatcher
+- [x] compatibility database loader
+- [x] diagnostic report/evidence model
+- [x] JSON diagnostic exporter
+- [x] BWM read-only adapter
+- [x] unit-test coverage for BWM framing/parser/adapter and new report/compatibility components
+
+### Still blocked on real hardware / integration
+
+- [ ] CI build + tests VERIFIED on GitHub
 - [ ] USB transport
 - [ ] PM5 identification adapter
-- [ ] BWM read-only adapter
-- [ ] report exporter
+- [ ] end-to-end Inspector orchestration
+- [ ] report exporter wired to real Inspector data
+- [ ] hardware-observed payload layouts
+
+The code above is implementation progress, not proof of hardware compatibility. `PROTOCOL VERIFIED` remains distinct from `HARDWARE VERIFIED`.
 
 ## M2 — Real Hardware Baseline
 
