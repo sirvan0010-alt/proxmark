@@ -34,7 +34,18 @@ public static class BwmFrameCodec
         WriteU16(result, 4, (ushort)payload.Length);
         payload.CopyTo(result.AsSpan(BwmProtocolConstants.HeaderSize));
 
-        var crc = BwmCrc16.Compute(result.AsSpan(2, 4 + payload.Length));
+        // CRC covers magic + commandId + length + payload (everything up to
+        // the CRC field itself). VERIFIED against the official firmware
+        // source: RfidResearchGroup/Proxmark5_BWM_esp32, commit
+        // b918166128e05455c2dcb4e232216d453bbf29ee (2026-08-08),
+        // components/app_uart_cmd/app_cmd_uart.c, uart_build_and_send():
+        // crc16_ccitt(pkt_buf, idx, CRC16_INIT) where idx already includes
+        // the 2 header/magic bytes. This is not a hypothesis pulled from a
+        // different (PM3 NG) protocol — it is read directly from the BWM
+        // firmware source this client targets. See docs/BWM_PROTOCOL.md
+        // "Verified provenance". Do NOT change this scope without new
+        // evidence from the same or a newer verified firmware source.
+        var crc = BwmCrc16.Compute(result.AsSpan(0, BwmProtocolConstants.HeaderSize + payload.Length));
         WriteU16(result, result.Length - 2, crc);
         return result;
     }
@@ -63,7 +74,8 @@ public static class BwmFrameCodec
             return false;
 
         ushort receivedCrc = ReadU16(frame, expected - 2);
-        ushort calculatedCrc = BwmCrc16.Compute(frame.Slice(2, 4 + length));
+        // See Encode(): CRC covers magic + commandId + length + payload.
+        ushort calculatedCrc = BwmCrc16.Compute(frame.Slice(0, BwmProtocolConstants.HeaderSize + length));
         if (receivedCrc != calculatedCrc)
             return false;
 

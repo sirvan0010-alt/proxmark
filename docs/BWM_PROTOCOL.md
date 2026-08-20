@@ -1,5 +1,35 @@
 # BWM Protocol Adapter Requirements
 
+## Verified provenance (2026-08-19, re-confirmed 2026-08-20)
+
+The frame format and command table are verified against the **official**
+firmware source, not just documented as "current upstream documentation":
+
+- Repository: `RfidResearchGroup/Proxmark5_BWM_esp32`
+- Commit: `b918166128e05455c2dcb4e232216d453bbf29ee` (2026-08-08)
+- Files: `components/app_uart_cmd/app_cmd_uart.{c,h}` (wire format, CRC),
+  `main/app_com_defs.h` (command codes)
+
+Confirmed against `BwmProtocolConstants.cs`: magic values, CRC polynomial,
+CRC initial value, header size, and default UART baud rate all match the
+firmware exactly.
+
+**CRC scope, confirmed from source (not a PM3/NG-protocol assumption):**
+the firmware's `uart_build_and_send()` computes CRC over
+`crc16_ccitt(pkt_buf, idx, CRC16_INIT)` where `idx` at that point already
+includes the 2-byte magic header — i.e. CRC covers
+`magic + commandId + length + payload`, not just `commandId + length +
+payload`. `BwmFrameCodec` in `BwmFrame.cs` must match this scope. This
+value was briefly reverted to the wrong (header-excluded) scope during a
+repository history rewrite on 2026-08-20 and has been re-applied — see the
+Repository Integrity Rule in `AI_CONTEXT.md`, added as a direct result of
+that incident.
+
+Command codes are generated 1:1 from `app_com_defs.h` into
+`BwmCommandCode.cs` / `BwmBroadcastType.cs` — see the provenance comment at
+the top of that file for the exact commit this was generated from. If the
+upstream header changes, regenerate rather than hand-editing.
+
 ## Scope
 
 This document defines what the PM5 Control Center needs from the Proxmark5 BWM/ESP32 protocol adapter. It is intentionally based on verified upstream material and must be revised when the upstream protocol changes.
@@ -55,7 +85,7 @@ The initial adapter should prioritize documented read-only information such as:
 - Wi-Fi status/configuration information where read-only commands exist
 - BLE status where exposed
 
-Exact command IDs must be generated from the verified upstream definition used for the implementation and must be associated with an upstream revision/date.
+Exact command IDs are generated from the verified upstream definition — see `BwmCommandCode.cs` / `BwmBroadcastType.cs` and the "Verified provenance" section above for the associated upstream commit/date.
 
 ## Capability discovery
 

@@ -240,6 +240,23 @@ The simulator is an evidence-backed behavioural model for offline development. I
 
 Real hardware observations override simulator assumptions. Unknown behaviour remains unknown until evidence exists.
 
+## REPOSITORY INTEGRITY RULE
+
+An AI assistant with GitHub write access MUST NOT force-push, rewrite, reset, squash, or otherwise replace repository history unless explicitly instructed by the human maintainer for that specific action.
+
+An AI assistant MUST NOT claim a change was pushed unless it has verifiable evidence (a commit SHA and/or a fresh read of the pushed state) — not just that a tool call returned success.
+
+Before modifying an existing file, an AI assistant MUST inspect its current contents and preserve unrelated changes made by other sessions or other AI assistants since it last saw the repository.
+
+Before replacing repository state (a push, a large multi-file commit, etc.), an AI assistant MUST report:
+
+- previous HEAD (commit SHA);
+- new HEAD (commit SHA);
+- files changed, files deleted, files added;
+- whether history was rewritten (force-push/reset/squash) or was a normal fast-forward.
+
+If two sessions' implementations of the same component conflict, an AI assistant MUST NOT silently pick one and discard the other. It must surface the conflict to the human maintainer and let evidence (tests, upstream source, hardware observation) — not recency of push — decide.
+
 ## GITHUB / UPSTREAM POLICY
 
 Record exact upstream repository, branch/tag, commit and date whenever practical. Upstream is a moving target.
