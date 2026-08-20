@@ -25,6 +25,25 @@ repository history rewrite on 2026-08-20 and has been re-applied — see the
 Repository Integrity Rule in `AI_CONTEXT.md`, added as a direct result of
 that incident.
 
+**Independent re-verification (2026-08-20), status: PROTOCOL VERIFIED
+(source code), not yet HARDWARE VERIFIED:**
+directly fetched `app_cmd_uart.c` at commit `b918166128e05455c2dcb4e232216d453bbf29ee`
+via the GitHub API (not a search snippet or a claim taken on trust) and
+confirmed the CRC scope from the raw source itself, on both sides:
+
+- TX side, `uart_build_and_send()`, line 88: `crc16_ccitt(pkt_buf, idx,
+  CRC16_INIT)`, where `idx` already includes header(2)+cmd(2)+len(2)+payload
+  at that point in the function.
+- RX side, line 143: the streaming parser seeds `crc_calc` from
+  `crc16_ccitt(hdr, 2, CRC16_INIT)` — i.e. from the 2-byte header — before
+  folding in cmd/len/payload bytes as they arrive.
+
+Both the encode and decode paths in the actual firmware source agree: CRC
+scope includes the magic header. This is source-level confirmation, not a
+physical-device observation — it should still be treated as `HYPOTHESIS`
+for on-wire behavior until checked against a real PM5/BWM unit, per the
+Diagnostic truth model in `README.md`.
+
 Command codes are generated 1:1 from `app_com_defs.h` into
 `BwmCommandCode.cs` / `BwmBroadcastType.cs` — see the provenance comment at
 the top of that file for the exact commit this was generated from. If the
