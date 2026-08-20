@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>PM5Control.Simulator</RootNamespace>
+    <AssemblyName>PM5Control.Simulator</AssemblyName>
+  </PropertyGroup>
+</Project>
