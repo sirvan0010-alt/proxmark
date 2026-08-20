@@ -12,5 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/PM5Control.Core/PM5Control.Core.csproj" />
+    <ProjectReference Include="../../src/PM5Control.Simulator/PM5Control.Simulator.csproj" />
   </ItemGroup>
 </Project>
