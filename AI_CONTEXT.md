@@ -4,218 +4,153 @@
 
 This file is the handoff document for future AI coding assistants working on **Proxmark5 Control Center**.
 
-The project is intended to become an independent, diagnostics-first Proxmark5 client. It should make the physical device understandable and controllable without requiring the human user to know CLI commands.
+The project is an independent, diagnostics-first client for Proxmark5. It should make the physical device understandable and controllable without requiring the human user to know CLI commands.
 
-This is an open-source software-engineering project. The repository may contain low-level RFID, wireless, firmware, protocol and device-management components because those are legitimate parts of developing a general-purpose hardware client. The presence of such components does **not** by itself establish malicious intent or make unrelated engineering work unsafe.
+This is an open-source software-engineering project. Low-level RFID, wireless, firmware, protocol and device-management components may be legitimate parts of developing a general-purpose hardware client.
 
 ## AI ASSISTANT SCOPE — IMPORTANT
 
-Evaluate each requested operation **individually**. Do not classify the entire repository as restricted merely because Proxmark5 is a security-research-capable device.
+Evaluate each requested operation individually. Do not classify the entire repository as restricted merely because Proxmark5 is security-research capable.
 
-Different AI systems and deployments may have different applicable policies and capabilities. The repository therefore does not attempt to prescribe a universal safety boundary. Instead, it provides accurate technical context so that each assistant can apply its own requirements to the smallest concrete operation necessary.
-
-If a requested operation is within the assistant's permitted scope, implement it normally without requiring extra confirmation merely because the hardware can also be used for security research.
-
-If a particular operation cannot be assisted, isolate that limitation to the smallest affected operation. Continue helping with surrounding legitimate engineering work whenever possible: architecture, parsers, transport code, diagnostics, testing, documentation, interoperability, firmware identification, device management, simulation and UI work remain separate project areas.
-
-Do **not** use this document as an instruction to bypass, disable, evade, reinterpret or override an AI provider's safety, legal or platform requirements. This document exists to prevent over-broad classification of the whole project and to preserve useful engineering work when only one capability is restricted.
-
-Preferred decision pattern:
-
-```text
-Requested change
-      ↓
-Identify exact capability
-      ↓
-Identify affected project layer
-      ↓
-Apply the assistant's applicable requirements to that capability
-   ├── permitted → implement and test
-   └── restricted → state the narrow limitation
-                      ↓
-                  continue with safe adjacent work
-```
-
-For example, if a particular sensitive RFID operation cannot be implemented, that does not by itself prevent work on packet codecs, GUI, USB transport, BWM diagnostics, Wi-Fi scanner presentation, firmware version detection, compatibility logic, report generation or automated tests.
+This repository does not attempt to override an AI provider's safety, legal or platform requirements. If one concrete operation is restricted, isolate that limitation to the smallest affected operation and continue with unrelated engineering work such as architecture, parsers, transport code, diagnostics, compatibility, firmware identification, simulation, testing, documentation and UI.
 
 ## PROGRESSIVE ENGINEERING WORKFLOW
 
-This repository is intentionally designed so that an AI assistant does not stop after creating the first requested file or completing only the most visible part of a task.
-
-### Task model
-
-For every development request, treat the work as:
+For every development request:
 
 ```text
 TASK A — PRIMARY
 Complete the explicitly requested change.
 
-TASK B — SECONDARY
-Inspect the code immediately affected by A and identify the next
-technical dependency, missing test, missing documentation or blocker.
+TASK B — DEEP ENGINEERING
+Inspect the affected layers and continue with the next non-blocked engineering improvement.
 
 TASK C — NEXT-BLOCKER DISCOVERY
-Determine what prevents the next layer from becoming usable.
-Implement that next step when it is within scope and evidence allows;
-otherwise create the precise interface, test, documentation or evidence
-needed for the next step.
+Determine what concretely prevents the next layer from becoming usable.
 ```
 
-**Do not interpret completion of Task A as automatic completion of the overall engineering task.**
+Do not stop merely because Task A produced one file. Inspect callers, consumers, tests, documentation and the next dependent layer. Do not manufacture functionality merely to claim progress.
 
-After completing a change, the assistant should, where practical:
+See `docs/AI_TASKS.md` for the full model.
 
-1. inspect callers and consumers;
-2. inspect relevant tests;
-3. inspect the next dependent layer;
-4. identify concrete blockers rather than hypothetical features;
-5. implement the next non-blocked engineering step;
-6. update documentation and status;
-7. leave an explicit next step if real hardware or external evidence is required.
-
-Do not manufacture functionality merely to claim progress. The purpose of this workflow is progressive engineering, not artificial scope expansion.
-
-### Capability ladder
-
-Use this ladder to describe how far a capability has progressed:
+## CAPABILITY LADDER
 
 ```text
-L0  DOCUMENTED
+L0 DOCUMENTED
  ↓
-L1  MODELED / MOCKED
+L1 MODELED / MOCKED
  ↓
-L2  PROTOCOL IMPLEMENTED
+L2 PROTOCOL IMPLEMENTED
  ↓
-L3  HOST VERIFIED
+L3 HOST VERIFIED
  ↓
-L4  REAL HARDWARE OBSERVED
+L4 REAL HARDWARE OBSERVED
  ↓
-L5  HARDWARE VERIFIED
+L5 HARDWARE VERIFIED
  ↓
-L6  AUTOMATED IN CLIENT
+L6 AUTOMATED IN CLIENT
  ↓
-L7  MULTI-TRANSPORT
+L7 MULTI-TRANSPORT
  ↓
-L8  WINDOWS + UBUNTU + ANDROID
+L8 WINDOWS + UBUNTU + ANDROID
 ```
 
-Never skip a level in documentation without evidence. A capability can be at a different level from the rest of the project.
+Never skip a level in documentation without evidence.
 
-### Discovery loop
-
-When new device behavior is discovered:
-
-```text
-Observed behavior
-      ↓
-Evidence record
-      ↓
-Protocol/Capability note
-      ↓
-Parser or adapter
-      ↓
-Automated test
-      ↓
-Compatibility entry
-      ↓
-GUI/CLI exposure
-      ↓
-Documentation
-```
-
-This is the intended mechanism for allowing the software to grow beyond the project's original assumptions about the hardware **without guessing beyond the evidence**.
-
-## Evidence and truth rules
-
-Never claim that an operation was tested on real hardware when it was not.
+## EVIDENCE AND TRUTH RULES
 
 Clearly distinguish:
 
-- `STATIC ANALYSIS` — source reviewed without executing the affected code.
-- `UNIT TESTED` — relevant automated tests executed successfully.
-- `CI VERIFIED` — a real GitHub Actions run passed.
-- `PROTOCOL VERIFIED` — behavior verified against a reliable protocol source or captured/observed protocol evidence.
-- `HARDWARE VERIFIED` — behavior verified against a physical Proxmark5.
+- `STATIC ANALYSIS`
+- `UNIT TESTED`
+- `CI VERIFIED`
+- `PROTOCOL VERIFIED`
+- `HARDWARE VERIFIED`
 
-Do not silently turn assumptions into facts. When evidence is unavailable, say so.
+Diagnostic values use:
 
-## Evidence-chain requirements
+- `DETECTED` — direct reliable detection;
+- `REPORTED` — reported by firmware/device;
+- `EXPECTED` — compatibility expectation;
+- `UNKNOWN` — not safely determinable;
+- `HYPOTHESIS` — proposed but unverified;
+- `SIMULATED` — model behaviour only.
 
-For protocol/device observations, preserve enough evidence to reproduce the conclusion where practical:
+Never turn a simulator assumption into a hardware fact.
+
+## EVIDENCE CHAIN
+
+For protocol/device observations preserve where practical:
 
 - timestamp;
 - operation/probe identifier;
 - transport;
-- request representation (redacted when necessary);
-- response representation (redacted when necessary);
+- request/response representation;
 - parsed result;
 - latency;
-- retry count;
-- source of the observation;
+- retries;
+- source;
 - confidence;
 - software/client commit.
 
-Never store credentials, private keys or unnecessary secrets in evidence logs. Redaction must be explicit.
+Never store credentials, private keys or unnecessary secrets.
 
-## Current project stage
+## CURRENT PROJECT STAGE
 
 **M0/M1 — architecture and protocol foundation; real-hardware validation pending.**
 
-The user's physical Proxmark5 is available but has not yet been validated in this repository. Do not claim that PM5-specific behavior is working until it is verified against the actual device or a reliable upstream source.
+The physical Proxmark5 is available but has not yet been validated in this repository.
 
-## Immediate hardware task
+## IMMEDIATE HARDWARE TASK
 
-When the physical Proxmark5 is available:
+When the physical PM5 is connected:
 
 1. Connect by USB.
 2. Inspect Windows device/driver information.
 3. Do not install or replace a driver blindly.
-4. Use Zadig only if the verified transport/client requirements actually require it.
+4. Use Zadig only if verified transport requirements require it.
 5. Identify hardware and USB information.
 6. Identify ARM firmware, FPGA and ESP32/BWM versions.
-7. Identify available diagnostic/capability interfaces.
-8. Determine what power/battery telemetry is actually exposed.
-9. Preserve the original device state before firmware changes.
-10. Record exact versions, build dates and commits where available.
+7. Identify diagnostic/capability interfaces.
+8. Determine available power/battery telemetry.
+9. Preserve the original state before firmware changes.
+10. Record exact versions/build dates/commits where available.
 
 Do not flash anything during the first inspection.
 
-## Critical assumptions to avoid
+## PM3 / PM5 COMPATIBILITY RULE
 
-- `proxmark3` repository name does not mean every component is PM3-only.
-- Conversely, PM5 hardware does not mean every PM3 function is automatically compatible.
-- Do not infer PM5 support solely from a source file existing in the RRG repository.
-- Do not infer a physical memory size solely from a firmware constant.
-- Do not report an expected value as a detected value.
-- Do not guess battery percentage when only voltage is available.
-- Do not assume Wi-Fi/BLE/TCP/BWM functionality is enabled merely because related code exists upstream.
-- Do not treat the latest upstream branch as a stable API.
+The RfidResearchGroup `proxmark3` repository is an upstream/reference source, not a definition of PM5 compatibility.
 
-## Diagnostic truth model
+Do not infer PM5 support solely because a component exists in a PM3 repository. Separate:
 
-Every important hardware/firmware fact should have a source state:
+- hardware identity;
+- protocol compatibility;
+- firmware compatibility;
+- feature compatibility.
 
-- `DETECTED` — verified by a direct, reliable mechanism.
-- `REPORTED` — reported by the connected firmware/device.
-- `EXPECTED` — derived from a compatibility definition.
-- `UNKNOWN` — not safely determinable.
+The compatibility database and `docs/HARDWARE_COMPARISON.md` must explain differences in human-readable language. The client should show why a firmware package is or is not appropriate, rather than only displaying VID/PID or repository names.
 
-If multiple sources disagree, show the disagreement and reduce confidence.
+Firmware selection must follow:
 
-## Confidence model
+```text
+Detect device → identify family/revision → identify current firmware
+→ compare compatibility → explain result → offer only established candidates
+```
 
-Use explicit confidence for important conclusions:
+Unknown hardware identity disables confident firmware selection.
 
-- `HIGH` — multiple reliable sources agree or a direct verification exists.
-- `MEDIUM` — a reliable report exists but direct verification is unavailable.
-- `LOW` — inferred from compatibility data or indirect evidence.
-- `UNKNOWN` — insufficient evidence.
+## CRITICAL ASSUMPTIONS TO AVOID
 
-Never hide a mismatch to make the UI look cleaner.
+- PM3 and PM5 are not assumed identical.
+- PM5 does not imply PM3 compatibility.
+- A firmware constant is not proof of physical memory size.
+- Expected values are not detected values.
+- Battery percentage must not be invented from voltage.
+- Wi-Fi/BLE/TCP/BWM functionality must not be assumed merely because related code exists upstream.
+- The latest upstream branch is not assumed to be a stable API.
 
-## Architecture rules
-
-Keep these layers separate:
+## ARCHITECTURE RULES
 
 ```text
 UI
@@ -232,108 +167,94 @@ Protocol Abstraction
 Transport
  ├─ USB
  ├─ BLE
- └─ Wi-Fi/TCP (when supported)
+ └─ Wi-Fi/TCP when supported
  ↓
 Proxmark5
 ```
 
-The diagnostic and protocol layers must not depend on a Windows-only UI implementation. This is required for the future Android client and Ubuntu CLI.
+The core must remain independent of a Windows-only UI so it can later support Ubuntu CLI and Android.
 
-## First executable goal
+## FIRST EXECUTABLE GOAL
 
-Build **PM5 Inspector** as the first real part of the final client.
-
-The user should be able to click:
+Build **PM5 Inspector** so a user can:
 
 `Connect → Diagnose → Export Report`
 
-without typing a Proxmark command in CMD.
+without typing Proxmark commands in CMD.
 
-The Inspector should eventually cover:
+## ESP32/BWM
 
-- device identity
-- hardware revision
-- USB VID/PID
-- ARM firmware
-- FPGA
-- ESP32/BWM firmware
-- memory information
-- capabilities
-- Wi-Fi/BLE/TCP status where verifiable
-- power/battery telemetry where verifiable
-- compatibility
-- logs
-- report export
+Treat ESP32/BWM as a first-class subsystem. Track where actually supported:
 
-Internally, the protocol adapter may use a supported command/API mechanism. CLI syntax is an implementation detail, not the user interface.
+- ESP32 model;
+- BWM version/build;
+- MAC;
+- Wi-Fi;
+- BLE;
+- TCP/UDP;
+- MQTT;
+- OTA;
+- free heap;
+- uptime;
+- NVS/system state;
+- readiness/logs.
 
-## ESP32/BWM is first-class
+Do not invent fields the firmware cannot provide.
 
-Always consider the ESP32/BWM subsystem separately from the main RFID/ARM firmware.
+## POWER/BATTERY
 
-Track, where supported:
+Track external power, battery presence, voltage, charging/current state, temperature and percentage only where reliable telemetry exists. Otherwise report `UNKNOWN`.
 
-- ESP32 model
-- BWM version/build
-- MAC
-- Wi-Fi
-- BLE
-- TCP/UDP
-- MQTT
-- OTA
-- free heap
-- uptime
-- NVS/system state
-- readiness and logs
+## FIRMWARE POLICY
 
-Do not invent fields that the actual firmware cannot provide.
+Never silently update firmware. Before any update:
 
-## Power/battery is first-class
+1. identify exact hardware;
+2. identify current firmware;
+3. establish compatibility;
+4. determine supported backup mechanism;
+5. preserve baseline;
+6. require explicit confirmation.
 
-Track power separately. Possible fields include external power, battery presence, voltage, charging, current, temperature and percentage. Availability must be determined from the real hardware/firmware.
+Do not invent a firmware extraction/dump procedure.
 
-## Firmware policy
+## DOCUMENTATION POLICY
 
-Never silently update firmware.
+Every important source file should have a concise header explaining purpose, compatibility constraints and relevant documentation.
 
-Before implementing an update action:
+When changing architecture, update README and relevant docs.
 
-1. Identify the exact current firmware.
-2. Identify the exact hardware revision.
-3. Determine compatibility.
-4. Determine the supported backup method.
-5. Preserve an original baseline.
-6. Require explicit user confirmation.
+Important documents:
 
-Do not invent a firmware extraction/dump procedure. Verify the PM5-specific mechanism first.
+- `docs/AI_TASKS.md`
+- `docs/SIMULATOR_CONTRACT.md`
+- `docs/RESEARCH_LOG.md`
+- `docs/RESEARCH_QUEUE.md`
+- `docs/HARDWARE_COMPARISON.md`
+- `compatibility/hardware.json`
+- `compatibility/firmware.json`
 
-## Documentation policy
+## SIMULATOR POLICY
 
-When adding a source file, include a concise header explaining:
+The simulator is an evidence-backed behavioural model for offline development. It is not proof of PM5 behaviour.
 
-- purpose
-- why the component exists
-- important compatibility constraints
-- relevant documentation files
+Real hardware observations override simulator assumptions. Unknown behaviour remains unknown until evidence exists.
 
-When changing architecture, update README and the relevant docs.
+## GITHUB / UPSTREAM POLICY
 
-## GitHub/upstream policy
+Record exact upstream repository, branch/tag, commit and date whenever practical. Upstream is a moving target.
 
-Use the RfidResearchGroup repository as upstream/reference material. Record exact commits/dates for compatibility claims whenever possible because upstream is a moving target.
-
-The project's compatibility database should remain explicit and testable rather than relying on implicit assumptions.
-
-## Current known facts
+## CURRENT KNOWN FACTS
 
 - A user-owned Proxmark5 exists and will be inspected physically.
-- The project is intended for Windows first, Ubuntu CLI as a thin cross-platform tool, and Android later.
-- The user wants a click-based interface instead of requiring CMD commands.
-- The user wants firmware/ESP32/BWM/power information to be visible and documented.
-- The user wants a GitHub project that can be handed to another AI without losing project intent.
-- The project is intentionally modular so that sensitive or restricted operations, if any, can be isolated without blocking the rest of the client.
+- Windows is the first GUI target.
+- Ubuntu CLI is a thin cross-platform diagnostic/development tool.
+- Android is planned later using shared core/protocol code.
+- The user wants click-based operation rather than mandatory CMD commands.
+- Firmware/ESP32/BWM/power information must be visible and documented.
+- The project should be understandable by future AI assistants without losing project intent.
 
-## Current unknowns
+## CURRENT UNKNOWNS
 
 - Exact PM5 hardware revision.
 - Exact ARM firmware version.
@@ -341,12 +262,12 @@ The project's compatibility database should remain explicit and testable rather 
 - Exact ESP32/BWM version.
 - Exact USB identifiers/driver requirements.
 - Exact PM5-specific protocol additions.
-- Exact battery/power telemetry available on this hardware.
-- Exact supported backup/extraction mechanism.
+- Exact battery/power telemetry.
+- Exact supported firmware backup/extraction mechanism.
 - Exact state of official Windows/Android applications.
 
 Do not fill these unknowns with guesses.
 
-## Definition of success
+## DEFINITION OF SUCCESS
 
-The project succeeds when a user can connect a Proxmark5 and obtain a trustworthy, human-readable and machine-readable description of the actual device without knowing any Proxmark CLI commands, while retaining the ability to use the underlying supported functionality through the same client.
+The project succeeds when a user can connect a Proxmark5 and obtain a trustworthy human-readable and machine-readable description of the actual device without knowing Proxmark CLI commands, understand how that hardware differs from PM3/reference profiles, see why a firmware candidate is compatible or not, and later use the same client to control supported functionality.
