@@ -65,6 +65,38 @@ public class BwmReadOnlyAdapterTests
     }
 
     [Fact]
+    public async Task QueryAsync_RejectsMutatingCommand_BeforeTransportCall()
+    {
+        var sendCount = 0;
+        var transport = new FakeTransport
+        {
+            OnSend = _ =>
+            {
+                sendCount++;
+                return BwmFrameCodec.EncodeResponse((ushort)BwmCommandCode.SetSysTimestamp, Array.Empty<byte>());
+            }
+        };
+        var adapter = new BwmReadOnlyAdapter(transport);
+
+        var frame = await adapter.QueryAsync(BwmCommandCode.SetSysTimestamp);
+
+        Assert.Null(frame);
+        Assert.Equal(0, sendCount);
+    }
+
+    [Fact]
+    public async Task QueryAsync_PropagatesCancellation()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        var transport = new FakeTransport { ThrowOnSend = new OperationCanceledException(cts.Token) };
+        var adapter = new BwmReadOnlyAdapter(transport);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            () => adapter.QueryAsync(BwmCommandCode.GetVersionInfo, cancellationToken: cts.Token));
+    }
+
+    [Fact]
     public async Task QueryAsync_ReturnsNull_WhenTransportThrows()
     {
         var transport = new FakeTransport { ThrowOnSend = new TimeoutException("simulated timeout") };
