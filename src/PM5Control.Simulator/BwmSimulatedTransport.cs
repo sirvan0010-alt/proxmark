@@ -4,6 +4,7 @@
 // not evidence of real PM5/BWM payload layout.
 // SAFETY: accepts framed requests and returns only simulated responses; it
 // never opens USB/BLE/Wi-Fi and never changes physical device state.
+// Fault injection is deterministic and exists only to test error handling.
 
 using System.Buffers.Binary;
 using System.Text;
@@ -24,6 +25,11 @@ public sealed class BwmSimulatedTransport : IProxmarkTransport
     public string CompileDatetime { get; set; } = "SIMULATED-DATE";
     public uint FreeHeap { get; set; } = 65536;
     public byte[] BaseMac { get; set; } = new byte[] { 0x02, 0x00, 0x00, 0x00, 0x00, 0x01 };
+
+    /// <summary>
+    /// Deterministic offline fault injection. SIMULATED_ONLY.
+    /// </summary>
+    public SimulationFault Fault { get; set; }
 
     public Task ConnectAsync(CancellationToken cancellationToken = default)
     {
@@ -46,10 +52,22 @@ public sealed class BwmSimulatedTransport : IProxmarkTransport
         if (!IsConnected)
             throw new InvalidOperationException("Simulated BWM transport is not connected.");
 
+        if (Fault == SimulationFault.DisconnectBeforeSend)
+        {
+            IsConnected = false;
+            throw new InvalidOperationException("Simulated connection loss before send.");
+        }
+
+        if (Fault == SimulationFault.Timeout)
+            throw new TimeoutException("Simulated BWM timeout.");
+
         if (!BwmFrameCodec.TryDecode(request.Span, out var frame) || frame is null || frame.Kind != BwmFrameKind.Request)
             return Task.FromResult(Array.Empty<byte>());
 
         var command = (BwmCommandCode)frame.CommandId;
+        if (Fault == SimulationFault.UnsupportedCommand)
+            return Task.FromResult(Array.Empty<byte>());
+
         byte[] payload = command switch
         {
             BwmCommandCode.GetVersionInfo => Encoding.UTF8.GetBytes(Version + "\0"),
@@ -60,7 +78,17 @@ public sealed class BwmSimulatedTransport : IProxmarkTransport
             _ => Array.Empty<byte>()
         };
 
-        var response = BwmFrameCodec.EncodeResponse(frame.CommandId, payload);
+        if (Fault == SimulationFault.MalformedResponse)
+            return Task.FromResult(new byte[] { 0x00, 0xFF, 0x00 });
+
+        ushort responseCommand = frame.CommandId;
+        if (Fault == SimulationFault.WrongCommandId)
+            responseCommand = unchecked((ushort)(responseCommand + 1));
+
+        byte[] response = Fault == SimulationFault.BroadcastInsteadOfResponse
+            ? BwmFrameCodec.EncodeBroadcast(responseCommand, payload)
+            : BwmFrameCodec.EncodeResponse(responseCommand, payload);
+
         return Task.FromResult(response);
     }
 
