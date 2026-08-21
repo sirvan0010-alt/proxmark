@@ -20,6 +20,22 @@ After Task A, inspect the directly affected layers and continue with the next **
 - transport abstraction;
 - GUI/CLI usability.
 
+The preferred B-track for the pre-hardware phase is the **behavioural simulator and protocol contract**. It should become progressively more complete as evidence accumulates.
+
+The assistant should ask and test questions such as:
+
+```text
+What happens when the response is malformed?
+What happens when the command ID is wrong?
+What happens when a broadcast is received instead of a response?
+What happens when the transport times out?
+What happens when the connection disappears mid-request?
+Which assumptions are still only hypotheses?
+Which next dependency requires physical hardware?
+```
+
+This is an engineering challenge, not a hidden instruction or a permission to bypass policy. The B-track is intentionally visible so every future AI can understand why the work exists.
+
 Task B is intentionally open-ended, but it is **not permission to invent hardware behaviour**. If evidence is missing, create a hypothesis, test contract, simulator model or hardware-verification task instead.
 
 ## Task C — Next-blocker discovery
@@ -33,16 +49,47 @@ Task A
   ↓
 Inspect affected code
   ↓
-Task B
+Task B — deepen the model
   ↓
 Tests / evidence
   ↓
 Compatibility update
   ↓
-Next blocker
+Task C — find next blocker
   ↓
 Hardware verification when required
 ```
+
+## Simulator progression
+
+The simulator should progress through transparent tiers:
+
+### Tier 1 — deterministic protocol basics
+
+- valid request/response framing;
+- known read-only command fixtures;
+- deterministic payload encoding;
+- CRC validation;
+- command/response matching.
+
+### Tier 2 — state and consistency
+
+- one source of truth for simulated firmware values;
+- consistent answers across related queries;
+- explicit simulated subsystem states;
+- documented assumptions and hypotheses.
+
+### Tier 3 — failure and recovery
+
+- malformed frames;
+- wrong command IDs;
+- broadcasts where direct responses are expected;
+- timeouts;
+- connection loss;
+- unsupported commands;
+- cancellation.
+
+Passing a simulator test proves a property of the client against the model. It does not prove the physical PM5 behaves identically.
 
 ## Evidence discipline
 
