@@ -84,7 +84,15 @@ Explain result to human
 Offer only established firmware candidates
 ```
 
-See `docs/HARDWARE_COMPARISON.md`, `compatibility/hardware.json` and `compatibility/firmware.json`.
+See `docs/HARDWARE_COMPARISON.md`, `docs/CLI_COMMAND_REFERENCE.md`, `compatibility/hardware.json` and `compatibility/firmware.json`.
+
+## CLI command reference
+
+The project keeps a separate evidence-labelled reference of the established PM3 command surface and the still-unverified PM5 command surface:
+
+- `docs/CLI_COMMAND_REFERENCE.md`
+
+This distinction is important: a documented PM3 command such as `hw version` is not automatically a PM5 command, and BWM command IDs are protocol-level identifiers rather than user-facing CLI commands.
 
 ## First milestone: PM5 Inspector
 
