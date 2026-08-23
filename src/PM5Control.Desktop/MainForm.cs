@@ -1,4 +1,6 @@
 using Microsoft.Win32;
+using PM5Control.Core.Connections;
+using PM5Control.Core.Protocols.Bwm;
 
 namespace PM5Control.Desktop;
 
@@ -74,9 +76,9 @@ internal sealed class MainForm : Form
         AddStatus(status, 5, "ESP32 / BWM", _bwmValue);
 
         var buttons = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight };
-        _connectButton.Text = "Connect";
+        _connectButton.Text = "Connect / identify (read-only)";
         _connectButton.AutoSize = true;
-        _connectButton.Click += (_, _) => ConnectReadOnly();
+        _connectButton.Click += async (_, _) => await ConnectReadOnlyAsync();
         _refreshButton.Text = "Refresh device";
         _refreshButton.AutoSize = true;
         _refreshButton.Click += (_, _) => RefreshDeviceState();
@@ -130,21 +132,60 @@ internal sealed class MainForm : Form
         if (logChanges) Log($"Windows serial port detected: {port}");
     }
 
-    private void ConnectReadOnly()
+    private async Task ConnectReadOnlyAsync()
     {
-        var port = _portValue.Text;
-        if (string.IsNullOrWhiteSpace(port) || port.StartsWith("No ", StringComparison.OrdinalIgnoreCase))
+        var portName = _portValue.Text;
+        if (string.IsNullOrWhiteSpace(portName) || portName.StartsWith("No ", StringComparison.OrdinalIgnoreCase))
             return;
 
-        _connectionValue.Text = "Transport detected — protocol pending";
-        Log($"Selected {port}.");
-        Log("Read-only hardware identification is not enabled yet: PM5-specific transport/protocol still requires physical verification.");
-        Log("No firmware write, reset, flash or destructive operation was attempted.");
+        _connectButton.Enabled = false;
+        _connectionValue.Text = "Opening read-only transport…";
+        Log($"Selected {portName}.");
+        Log($"Opening BWM UART at {BwmProtocolConstants.DefaultUartBaudRate} baud; DTR/RTS disabled.");
+
+        await using var transport = new SerialProxmarkTransport(portName);
+        try
+        {
+            await transport.ConnectAsync();
+            Log("Serial transport opened. No reset, flash, firmware write or destructive command was issued.");
+
+            var adapter = new BwmReadOnlyAdapter(transport);
+            var info = await adapter.ReadDeviceInfoAsync();
+            var ready = await adapter.GetSysReadyStatusAsync();
+
+            _connectionValue.Text = "Connected — BWM response received";
+            _hardwareValue.Text = info.Esp32Model.HasValue ? $"BWM model 0x{info.Esp32Model.Value}" : "UNKNOWN";
+            _firmwareValue.Text = info.BwmFirmware.HasValue ? info.BwmFirmware.Value : "UNKNOWN";
+            _bwmValue.Text = ready.HasValue ? (ready.Value ? "Ready" : "Not ready") : "UNKNOWN";
+
+            Log("BWM read-only handshake succeeded.");
+            if (info.Esp32Model.HasValue)
+                Log($"Device model: 0x{info.Esp32Model.Value}");
+            if (info.BwmFirmware.HasValue)
+                Log($"BWM firmware: {info.BwmFirmware.Value}");
+            Log(ready.HasValue ? $"System ready: {ready.Value}" : "System ready: UNKNOWN");
+        }
+        catch (OperationCanceledException)
+        {
+            _connectionValue.Text = "Identification timed out";
+            Log("Read-only identification timed out; no destructive operation was attempted.");
+        }
+        catch (Exception ex)
+        {
+            _connectionValue.Text = "Transport detected — no valid BWM response";
+            SetUnknownHardware();
+            Log($"Read-only identification failed: {ex.Message}");
+            Log("No firmware write, reset, flash or destructive operation was attempted.");
+        }
+        finally
+        {
+            _connectButton.Enabled = true;
+        }
     }
 
     private void SetUnknownHardware()
     {
-        _hardwareValue.Text = "UNKNOWN — PM5 protocol not verified";
+        _hardwareValue.Text = "UNKNOWN — PM5/BWM protocol not verified";
         _firmwareValue.Text = "UNKNOWN";
         _fpgaValue.Text = "UNKNOWN";
         _bwmValue.Text = "UNKNOWN";
