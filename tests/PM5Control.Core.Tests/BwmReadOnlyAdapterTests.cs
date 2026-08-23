@@ -236,12 +236,13 @@ public class BwmReadOnlyAdapterTests
         {
             OnSend = request =>
             {
-                // Decode which command was requested and answer accordingly,
-                // so both GetDeviceModel and GetVersionInfo calls resolve.
+                // GetDeviceModel is source-documented as a little-endian uint16.
+                // Keep the test aligned with that contract rather than treating
+                // the model ID as an ESP32 marketing string.
                 BwmFrameCodec.TryDecode(request, out var requested);
                 var cmd = requested!.CommandId;
                 if (cmd == (ushort)BwmCommandCode.GetDeviceModel)
-                    return BwmFrameCodec.EncodeResponse(cmd, System.Text.Encoding.UTF8.GetBytes("ESP32-C2"));
+                    return BwmFrameCodec.EncodeResponse(cmd, new byte[] { 0x02, 0x00 });
                 if (cmd == (ushort)BwmCommandCode.GetVersionInfo)
                     return BwmFrameCodec.EncodeResponse(cmd, System.Text.Encoding.UTF8.GetBytes("1.0.0"));
                 return Array.Empty<byte>();
@@ -251,7 +252,7 @@ public class BwmReadOnlyAdapterTests
 
         var info = await adapter.ReadDeviceInfoAsync();
 
-        Assert.Equal("ESP32-C2", info.Esp32Model.Value);
+        Assert.Equal("0x0002", info.Esp32Model.Value);
         Assert.Equal("1.0.0", info.BwmFirmware.Value);
 
         // Fields outside BWM's scope (main PM5 ARM/FPGA subsystem) must stay
