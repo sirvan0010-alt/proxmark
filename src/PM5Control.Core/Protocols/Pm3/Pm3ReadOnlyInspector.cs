@@ -6,8 +6,31 @@ namespace PM5Control.Core.Protocols.Pm3;
 
 public sealed record Pm3ReadOnlyIdentity(string Hardware, string ArmFirmware, string FpgaFirmware, string Details);
 
+/// <summary>
+/// Raw, undecoded result of a single read-only PM3 NG diagnostic command.
+/// Payload is intentionally left as bytes: CMD_STATUS's on-wire layout varies
+/// across firmware revisions and has not been hardware-verified for PM5, so
+/// this class only reports that the device answered, not what the answer means.
+/// Confidence is therefore capped at "raw / unparsed" until verified on real hardware.
+/// </summary>
+public sealed record Pm3RawDiagnostic(string CommandName, bool Success, sbyte Status, sbyte Reason, int PayloadLength);
+
 public static class Pm3ReadOnlyInspector
 {
+    /// <summary>Sends CMD_STATUS (0x0108). Read-only. Payload is not decoded - see Pm3RawDiagnostic remarks.</summary>
+    public static async Task<Pm3RawDiagnostic> QueryStatusAsync(Pm3SerialTransport transport, CancellationToken cancellationToken = default)
+    {
+        var response = await transport.SendReadOnlyAsync(Pm3CommandCode.Status, cancellationToken).ConfigureAwait(false);
+        return new Pm3RawDiagnostic("CMD_STATUS", response.Status == 0, response.Status, response.Reason, response.Payload.Length);
+    }
+
+    /// <summary>Sends CMD_PING (0x0109). Read-only liveness check; device is expected to echo status 0.</summary>
+    public static async Task<Pm3RawDiagnostic> PingAsync(Pm3SerialTransport transport, CancellationToken cancellationToken = default)
+    {
+        var response = await transport.SendReadOnlyAsync(Pm3CommandCode.Ping, cancellationToken).ConfigureAwait(false);
+        return new Pm3RawDiagnostic("CMD_PING", response.Status == 0, response.Status, response.Reason, response.Payload.Length);
+    }
+
     public static async Task<Pm3ReadOnlyIdentity> InspectAsync(Pm3SerialTransport transport, CancellationToken cancellationToken = default)
     {
         var version = await transport.SendReadOnlyAsync(Pm3CommandCode.Version, cancellationToken).ConfigureAwait(false);
