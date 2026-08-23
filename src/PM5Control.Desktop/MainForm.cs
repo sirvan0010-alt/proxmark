@@ -76,7 +76,7 @@ internal sealed class MainForm : Form
         AddStatus(status, 5, "ESP32 / BWM", _bwmValue);
 
         var buttons = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight };
-        _connectButton.Text = "Connect / identify (read-only)";
+        _connectButton.Text = "Connect / analyze (read-only)";
         _connectButton.AutoSize = true;
         _connectButton.Click += async (_, _) => await ConnectReadOnlyAsync();
         _refreshButton.Text = "Refresh device";
@@ -139,43 +139,35 @@ internal sealed class MainForm : Form
             return;
 
         _connectButton.Enabled = false;
-        _connectionValue.Text = "Opening read-only transport…";
+        _connectionValue.Text = "Analyzing read-only transport…";
         Log($"Selected {portName}.");
-        Log($"Opening BWM UART at {BwmProtocolConstants.DefaultUartBaudRate} baud; DTR/RTS disabled.");
+        Log("No BWM command will be sent through an unverified PM5 USB/serial endpoint.");
+
+        var capability = BwmTransportCapability.Pm5ArmBridgeUnavailable();
+        Log(capability.Evidence);
+        Log(capability.Limitation);
 
         await using var transport = new SerialProxmarkTransport(portName);
         try
         {
             await transport.ConnectAsync();
-            Log("Serial transport opened. No reset, flash, firmware write or destructive command was issued.");
+            _connectionValue.Text = "Serial endpoint opened — BWM path unavailable";
+            _hardwareValue.Text = "UNKNOWN — USB endpoint identity not yet verified";
+            _firmwareValue.Text = "UNKNOWN";
+            _fpgaValue.Text = "UNKNOWN";
+            _bwmValue.Text = "BRIDGE NOT AVAILABLE";
 
-            var adapter = new BwmReadOnlyAdapter(transport);
-            var info = await adapter.ReadDeviceInfoAsync();
-            var ready = await adapter.GetSysReadyStatusAsync();
-
-            _connectionValue.Text = "Connected — BWM response received";
-            _hardwareValue.Text = info.Esp32Model.HasValue ? $"BWM model 0x{info.Esp32Model.Value}" : "UNKNOWN";
-            _firmwareValue.Text = info.BwmFirmware.HasValue ? info.BwmFirmware.Value : "UNKNOWN";
-            _bwmValue.Text = ready.HasValue ? (ready.Value ? "Ready" : "Not ready") : "UNKNOWN";
-
-            Log("BWM read-only handshake succeeded.");
-            if (info.Esp32Model.HasValue)
-                Log($"Device model: 0x{info.Esp32Model.Value}");
-            if (info.BwmFirmware.HasValue)
-                Log($"BWM firmware: {info.BwmFirmware.Value}");
-            Log(ready.HasValue ? $"System ready: {ready.Value}" : "System ready: UNKNOWN");
-        }
-        catch (OperationCanceledException)
-        {
-            _connectionValue.Text = "Identification timed out";
-            Log("Read-only identification timed out; no destructive operation was attempted.");
+            Log("Serial endpoint opened successfully.");
+            Log("Upstream PM5 documentation states that the ARM↔BWM communication driver is still TODO.");
+            Log("Therefore COM3 cannot currently be treated as a BWM command channel just because it is the PM5 USB port.");
+            Log("No BWM frame, firmware write, reset, flash or destructive operation was attempted.");
         }
         catch (Exception ex)
         {
-            _connectionValue.Text = "Transport detected — no valid BWM response";
+            _connectionValue.Text = "Serial endpoint unavailable";
             SetUnknownHardware();
-            Log($"Read-only identification failed: {ex.Message}");
-            Log("No firmware write, reset, flash or destructive operation was attempted.");
+            Log($"Serial transport could not be opened: {ex.Message}");
+            Log("No BWM frame, firmware write, reset, flash or destructive operation was attempted.");
         }
         finally
         {
