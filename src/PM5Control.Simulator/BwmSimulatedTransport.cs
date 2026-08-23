@@ -1,10 +1,9 @@
 // PM5 Control Center — simulated BWM transport
 // PURPOSE: end-to-end offline transport double for the real Core BWM adapter.
-// STATUS: SIMULATED_ONLY. Payload values and response shapes are fixtures,
-// not evidence of real PM5/BWM payload layout.
+// STATUS: SIMULATED_ONLY. Payload values are deterministic fixtures derived
+// from the source-documented response shapes; they are not hardware evidence.
 // SAFETY: accepts framed requests and returns only simulated responses; it
 // never opens USB/BLE/Wi-Fi and never changes physical device state.
-// Fault injection is deterministic and exists only to test error handling.
 
 using System.Buffers.Binary;
 using System.Text;
@@ -21,14 +20,19 @@ public sealed class BwmSimulatedTransport : IProxmarkTransport
     public event Action<ReadOnlyMemory<byte>>? DataReceived;
 
     public string Version { get; set; } = "SIM-BWM-0.1";
-    public string Model { get; set; } = "SIMULATED-PM5-BWM";
+    public ushort ModelId { get; set; } = 0xDA10;
     public string CompileDatetime { get; set; } = "SIMULATED-DATE";
+    public string TimeZone { get; set; } = "UTC";
     public uint FreeHeap { get; set; } = 65536;
+    public uint SysTimestamp { get; set; } = 0;
+    public uint UartBaudRate { get; set; } = 115200;
+    public uint UartMaxBaudRate { get; set; } = 2000000;
     public byte[] BaseMac { get; set; } = new byte[] { 0x02, 0x00, 0x00, 0x00, 0x00, 0x01 };
+    public byte[] NvsStats { get; set; } = new byte[20];
+    public bool LogUartForwardEnable { get; set; }
+    public byte LogLevel { get; set; }
+    public bool Ready { get; set; } = true;
 
-    /// <summary>
-    /// Deterministic offline fault injection. SIMULATED_ONLY.
-    /// </summary>
     public SimulationFault Fault { get; set; }
 
     public Task ConnectAsync(CancellationToken cancellationToken = default)
@@ -70,11 +74,19 @@ public sealed class BwmSimulatedTransport : IProxmarkTransport
 
         byte[] payload = command switch
         {
-            BwmCommandCode.GetVersionInfo => Encoding.UTF8.GetBytes(Version + "\0"),
-            BwmCommandCode.GetDeviceModel => Encoding.UTF8.GetBytes(Model + "\0"),
-            BwmCommandCode.GetAppCompileDatetime => Encoding.UTF8.GetBytes(CompileDatetime + "\0"),
+            BwmCommandCode.GetVersionInfo => Utf8String(Version),
+            BwmCommandCode.GetDeviceModel => EncodeUInt16LittleEndian(ModelId),
             BwmCommandCode.GetSysFreeHeap => EncodeUInt32LittleEndian(FreeHeap),
+            BwmCommandCode.GetSysTimestamp => EncodeUInt32LittleEndian(SysTimestamp),
+            BwmCommandCode.GetAppCompileDatetime => Utf8String(CompileDatetime),
+            BwmCommandCode.GetSysTimeZone => Utf8String(TimeZone),
             BwmCommandCode.GetSysBaseMacAddr when BaseMac.Length == 6 => BaseMac.ToArray(),
+            BwmCommandCode.GetSysUartCmdBaudRate => EncodeUInt32LittleEndian(UartBaudRate),
+            BwmCommandCode.GetSysUartCmdMaxBaudRate => EncodeUInt32LittleEndian(UartMaxBaudRate),
+            BwmCommandCode.GetSysNvsStats when NvsStats.Length == 20 => NvsStats.ToArray(),
+            BwmCommandCode.GetLogUartForwardEnable => new[] { (byte)(LogUartForwardEnable ? 1 : 0) },
+            BwmCommandCode.GetLogLevel => new[] { LogLevel },
+            BwmCommandCode.GetSysReadyStatus => new[] { (byte)(Ready ? 1 : 0) },
             _ => Array.Empty<byte>()
         };
 
@@ -90,6 +102,15 @@ public sealed class BwmSimulatedTransport : IProxmarkTransport
             : BwmFrameCodec.EncodeResponse(responseCommand, payload);
 
         return Task.FromResult(response);
+    }
+
+    private static byte[] Utf8String(string value) => Encoding.UTF8.GetBytes(value + "\0");
+
+    private static byte[] EncodeUInt16LittleEndian(ushort value)
+    {
+        var bytes = new byte[sizeof(ushort)];
+        BinaryPrimitives.WriteUInt16LittleEndian(bytes, value);
+        return bytes;
     }
 
     private static byte[] EncodeUInt32LittleEndian(uint value)
