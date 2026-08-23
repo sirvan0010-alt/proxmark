@@ -12,8 +12,20 @@
     "PM3": {
       "display_name": "Proxmark3 family",
       "status": "REFERENCE_ONLY",
-      "human_summary": "Legacy/reference family used by the RfidResearchGroup proxmark3 software ecosystem. It is a compatibility reference, not proof of PM5 compatibility.",
+      "human_summary": "Legacy/reference family used by the Proxmark3 software ecosystem. It is a compatibility reference, not proof of PM5 compatibility.",
       "firmware_rule": "PM3 firmware is not assumed to be compatible with PM5. Reusable protocol code must be verified independently."
+    },
+    "ICEMAN_PM3_VARIANT": {
+      "display_name": "Iceman Proxmark3 variant",
+      "status": "REFERENCE_ONLY",
+      "human_summary": "Proxmark3-family hardware/firmware variant associated with the Iceman ecosystem. Do not classify a device as this variant without independent hardware/firmware evidence.",
+      "firmware_rule": "Never recommend Iceman/PM3 firmware for PM5 from protocol similarity alone."
+    },
+    "RRG_PM3_VARIANT": {
+      "display_name": "RRG Proxmark3 variant",
+      "status": "REFERENCE_ONLY",
+      "human_summary": "Proxmark3-family variant associated with the RfidResearchGroup ecosystem. The shared repository/protocol ecosystem does not establish PM5 hardware compatibility.",
+      "firmware_rule": "Never recommend an RRG PM3 firmware branch for PM5 until exact hardware identity and compatibility evidence are established."
     }
   },
   "comparison_fields": [
@@ -31,7 +43,8 @@
     "Do not add a hardware revision, VID, PID or memory value until it is supported by reliable evidence.",
     "The first physical PM5 session should create the first observed entry.",
     "Expected compatibility values must never be presented as detected values.",
-    "The UI should explain differences in human terms, not only show hexadecimal identifiers."
+    "The UI should explain differences in human terms, not only show hexadecimal identifiers.",
+    "BWM protocol detection alone must remain separate from physical PM5/PM3/Iceman/RRG family detection."
   ],
   "selection_pipeline": [
     "Detect USB/device identity",
