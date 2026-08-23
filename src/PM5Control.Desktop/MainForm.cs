@@ -13,7 +13,7 @@ internal sealed class MainForm : Form
     private readonly TextBox _log = new();
     private readonly Button _connectButton = new();
     private readonly Button _refreshButton = new();
-    private readonly Timer _timer = new();
+    private readonly System.Windows.Forms.Timer _timer = new();
 
     public MainForm()
     {
