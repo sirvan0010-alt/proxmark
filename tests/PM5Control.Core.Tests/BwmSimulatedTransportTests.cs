@@ -1,3 +1,4 @@
+using PM5Control.Core.Diagnostics;
 using PM5Control.Core.Protocols.Bwm;
 using PM5Control.Simulator;
 
