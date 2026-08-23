@@ -24,7 +24,7 @@ The first objective is not to recreate every RFID command. The first objective i
 10. Create complete, versioned diagnostic reports suitable for humans and AI assistants.
 11. Provide safe backup workflows before firmware changes.
 12. Manage USB, Wi-Fi/TCP and Bluetooth/BLE connectivity where supported by the actual device.
-13. Eventually provide a modern Windows GUI and Android application using shared protocol/core code.
+13. Provide a modern Windows GUI and later an Android application using shared protocol/core code.
 14. Eventually expose the normal supported Proxmark functionality through a graphical interface and automation layer.
 15. Keep compatibility information tied to exact firmware versions, commits and dates.
 16. Explain PM5 versus PM3/reference hardware differences in human-readable terms before firmware selection.
@@ -86,6 +86,21 @@ Offer only established firmware candidates
 
 See `docs/HARDWARE_COMPARISON.md`, `docs/CLI_COMMAND_REFERENCE.md`, `compatibility/hardware.json` and `compatibility/firmware.json`.
 
+## Windows application
+
+The repository now contains `src/PM5Control.Desktop`, a native Windows Forms **PM5 Control Center** application. It is a `WinExe` targeting Windows and is intended to be launched by double-click rather than through `dotnet run` or a terminal.
+
+The first desktop build provides:
+
+- automatic Windows serial-port detection;
+- PM5 Inspector-style hardware status view;
+- explicit `UNKNOWN` states where PM5 protocol evidence is not yet available;
+- read-only connection/selection UI;
+- diagnostic log;
+- no firmware flashing, reset or destructive hardware operation.
+
+GitHub Actions publishes a self-contained, single-file `win-x64` Windows package as the `PM5Control-Windows` artifact after a successful Core test run. The desktop UI deliberately does not pretend that a COM port alone proves PM5 protocol compatibility.
+
 ## CLI command reference
 
 The project keeps a separate evidence-labelled reference of the established PM3 command surface and the still-unverified PM5 command surface:
@@ -98,7 +113,7 @@ This distinction is important: a documented PM3 command such as `hw version` is 
 
 The first executable milestone is a real client foundation called **PM5 Inspector**. It is not a disposable script. It is the first component of the final PM5 Control Center.
 
-The first UI should provide, at minimum:
+The desktop UI should ultimately provide, at minimum:
 
 - Connect / Disconnect
 - Automatic device detection
@@ -238,9 +253,9 @@ Because upstream changes frequently, compatibility claims should record reposito
 
 ## Current status
 
-**Stage: Project foundation / real-hardware validation pending.**
+**Stage: Windows PM5 Inspector shell added / real-hardware protocol validation pending.**
 
-The physical Proxmark5 owned by the project maintainer has not yet been inspected in this repository. The next hardware session should be read-only first: identify USB, inspect device/firmware versions, determine available PM5/BWM interfaces, and preserve the original state before any firmware update.
+The desktop executable shell is now in the repository and CI is configured to produce a self-contained Windows package. The physical PM5 session remains read-only: identify USB/serial transport, inspect device/firmware versions, determine available PM5/BWM interfaces, and preserve the original state before any firmware update.
 
 ## Project principle
 
