@@ -65,3 +65,29 @@ jobs:
           name: test-results-${{ matrix.os }}
           path: TestResults/*.trx
           retention-days: 90
+
+      - name: Restore desktop
+        if: matrix.os == 'windows-latest'
+        run: dotnet restore src/PM5Control.Desktop/PM5Control.Desktop.csproj
+
+      - name: Publish standalone Windows EXE
+        if: matrix.os == 'windows-latest'
+        run: >-
+          dotnet publish src/PM5Control.Desktop/PM5Control.Desktop.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:DebugType=None
+          -p:DebugSymbols=false
+          --output publish/PM5Control
+
+      - name: Upload standalone Windows EXE
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: PM5-Control-Center-Windows
+          path: publish/PM5Control/PM5Control.Desktop.exe
+          if-no-files-found: error
+          retention-days: 90
