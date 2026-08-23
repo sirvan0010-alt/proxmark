@@ -38,8 +38,14 @@ jobs:
         shell: pwsh
         run: Compress-Archive -Path artifacts/PM5Control-Windows/* -DestinationPath artifacts/PM5Control-Windows.zip
 
-      - name: Upload Windows package
+      - name: Upload Windows ZIP package
         uses: actions/upload-artifact@v4
         with:
           name: PM5Control-Windows
           path: artifacts/PM5Control-Windows.zip
+
+      - name: Upload Windows executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: PM5Control-EXE
+          path: artifacts/PM5Control-Windows/PM5Control.Desktop.exe
