@@ -136,7 +136,7 @@ public sealed class BwmStreamParserTests
         var count = 0;
         parser.FrameReceived += _ => count++;
         var frame = new byte[BwmProtocolConstants.HeaderSize];
-        frame[0] = (byte)BwmProtocolConstants.RequestMagic;
+        frame[0] = (byte)(BwmProtocolConstants.RequestMagic & 0xFF);
         frame[1] = (byte)(BwmProtocolConstants.RequestMagic >> 8);
         frame[4] = 0xFF;
         frame[5] = 0xFF;
