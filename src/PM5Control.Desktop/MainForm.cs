@@ -1,6 +1,7 @@
 using Microsoft.Win32;
 using PM5Control.Core.Connections;
 using PM5Control.Core.Protocols.Bwm;
+using PM5Control.Core.Protocols.Pm3;
 
 namespace PM5Control.Desktop;
 
@@ -139,35 +140,43 @@ internal sealed class MainForm : Form
             return;
 
         _connectButton.Enabled = false;
-        _connectionValue.Text = "Analyzing read-only transport…";
+        _connectionValue.Text = "Analyzing PM3/PM5 read-only protocol...";
         Log($"Selected {portName}.");
-        Log("No BWM command will be sent through an unverified PM5 USB/serial endpoint.");
+        Log("Sending only CMD_VERSION (0x0107) and CMD_CAPABILITIES (0x0112).");
+        Log("No firmware write, reset, flash or destructive command is authorized by this path.");
 
-        var capability = BwmTransportCapability.Pm5ArmBridgeUnavailable();
-        Log(capability.Evidence);
-        Log(capability.Limitation);
-
-        await using var transport = new SerialProxmarkTransport(portName);
+        await using var transport = new Pm3SerialTransport(portName);
         try
         {
             await transport.ConnectAsync();
-            _connectionValue.Text = "Serial endpoint opened — BWM path unavailable";
-            _hardwareValue.Text = "UNKNOWN — USB endpoint identity not yet verified";
-            _firmwareValue.Text = "UNKNOWN";
-            _fpgaValue.Text = "UNKNOWN";
-            _bwmValue.Text = "BRIDGE NOT AVAILABLE";
+            Log("Serial endpoint opened successfully; DTR/RTS disabled.");
 
-            Log("Serial endpoint opened successfully.");
-            Log("Upstream PM5 documentation states that the ARM↔BWM communication driver is still TODO.");
-            Log("Therefore COM3 cannot currently be treated as a BWM command channel just because it is the PM5 USB port.");
-            Log("No BWM frame, firmware write, reset, flash or destructive operation was attempted.");
+            var identity = await Pm3ReadOnlyInspector.InspectAsync(transport);
+            _connectionValue.Text = "PM3/PM5 NG response received";
+            _hardwareValue.Text = identity.Hardware;
+            _firmwareValue.Text = identity.ArmFirmware;
+            _fpgaValue.Text = identity.FpgaFirmware;
+            _bwmValue.Text = "Not queried — PM5 identity checked first";
+
+            Log("Read-only handshake succeeded.");
+            Log($"Hardware: {identity.Hardware}");
+            Log($"ARM: {identity.ArmFirmware}");
+            Log($"FPGA: {identity.FpgaFirmware}");
+            Log("CMD_VERSION and CMD_CAPABILITIES completed without a write/reset/flash operation.");
+        }
+        catch (OperationCanceledException)
+        {
+            _connectionValue.Text = "Read-only analysis cancelled";
+            SetUnknownHardware();
+            Log("Read-only analysis cancelled.");
         }
         catch (Exception ex)
         {
-            _connectionValue.Text = "Serial endpoint unavailable";
+            _connectionValue.Text = "PM3/PM5 protocol not verified";
             SetUnknownHardware();
-            Log($"Serial transport could not be opened: {ex.Message}");
-            Log("No BWM frame, firmware write, reset, flash or destructive operation was attempted.");
+            Log($"Read-only PM3/PM5 query failed: {ex.Message}");
+            Log("The serial port itself opened, but no valid PM3 NG response was accepted.");
+            Log("No firmware write, reset, flash or destructive command was attempted.");
         }
         finally
         {
@@ -177,7 +186,7 @@ internal sealed class MainForm : Form
 
     private void SetUnknownHardware()
     {
-        _hardwareValue.Text = "UNKNOWN — PM5/BWM protocol not verified";
+        _hardwareValue.Text = "UNKNOWN — PM3/PM5 protocol not verified";
         _firmwareValue.Text = "UNKNOWN";
         _fpgaValue.Text = "UNKNOWN";
         _bwmValue.Text = "UNKNOWN";
