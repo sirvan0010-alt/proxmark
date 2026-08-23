@@ -159,7 +159,7 @@ public sealed class BwmReadOnlyAdapter : IProxmarkProtocol
     {
         var frame = await QueryAsync(BwmCommandCode.GetLogLevel, cancellationToken: cancellationToken).ConfigureAwait(false);
         if (frame is null || frame.Payload.Length != 1)
-            return new DiagnosticValue<byte>(0, DiagnosticSourceState.Unknown, DiagnosticConfidence.Unknown, "APP_CMD_GET_LOG_LEVEL — expected 1-byte uint8", DateTimeOffset.UtcNow);
+            return new DiagnosticValue<byte>(0, false, DiagnosticSourceState.Unknown, DiagnosticConfidence.Unknown, "APP_CMD_GET_LOG_LEVEL — expected 1-byte uint8", DateTimeOffset.UtcNow);
 
         return new DiagnosticValue<byte>(frame.Payload[0], DiagnosticSourceState.Reported, DiagnosticConfidence.Medium, "APP_CMD_GET_LOG_LEVEL — source-documented uint8", DateTimeOffset.UtcNow);
     }
@@ -186,8 +186,8 @@ public sealed class BwmReadOnlyAdapter : IProxmarkProtocol
         var version = await GetVersionInfoAsync(cancellationToken).ConfigureAwait(false);
 
         return BwmIdentityInspector.Assess(
-            model.Value,
-            version.Value,
+            model.HasValue ? model.Value : null,
+            version.HasValue ? version.Value : null,
             usbVidPid,
             armFirmware,
             fpgaFirmware);
@@ -211,7 +211,8 @@ public sealed class BwmReadOnlyAdapter : IProxmarkProtocol
             BwmFirmware: bwmFirmware,
             MemoryBytes: unknownLong,
             Esp32Model: new DiagnosticValue<string>(
-                model.Value.HasValue ? $"0x{model.Value.Value:X4}" : null,
+                model.HasValue ? $"0x{model.Value:X4}" : null,
+                model.HasValue,
                 model.SourceState,
                 model.Confidence,
                 "APP_CMD_GET_DEVICE_MODEL — uint16 model ID; this value alone does not prove PM5/PM3/Iceman/RRG hardware family",
@@ -248,7 +249,7 @@ public sealed class BwmReadOnlyAdapter : IProxmarkProtocol
     private static DiagnosticValue<long> DecodeUInt32(BwmFrame? frame, string source)
     {
         if (frame is null || frame.Payload.Length != 4)
-            return new DiagnosticValue<long>(null, DiagnosticSourceState.Unknown, DiagnosticConfidence.Unknown, source + " — expected 4-byte uint32", DateTimeOffset.UtcNow);
+            return new DiagnosticValue<long>(0, false, DiagnosticSourceState.Unknown, DiagnosticConfidence.Unknown, source + " — expected 4-byte uint32", DateTimeOffset.UtcNow);
 
         uint value = BinaryPrimitives.ReadUInt32LittleEndian(frame.Payload);
         return new DiagnosticValue<long>(value, DiagnosticSourceState.Reported, DiagnosticConfidence.Medium, source + " — source-documented little-endian uint32; physical device not yet verified", DateTimeOffset.UtcNow);
@@ -257,7 +258,7 @@ public sealed class BwmReadOnlyAdapter : IProxmarkProtocol
     private static DiagnosticValue<ushort> DecodeUInt16(BwmFrame? frame, string source)
     {
         if (frame is null || frame.Payload.Length != 2)
-            return new DiagnosticValue<ushort>(null, DiagnosticSourceState.Unknown, DiagnosticConfidence.Unknown, source + " — expected 2-byte uint16", DateTimeOffset.UtcNow);
+            return new DiagnosticValue<ushort>(0, false, DiagnosticSourceState.Unknown, DiagnosticConfidence.Unknown, source + " — expected 2-byte uint16", DateTimeOffset.UtcNow);
 
         ushort value = BinaryPrimitives.ReadUInt16LittleEndian(frame.Payload);
         return new DiagnosticValue<ushort>(value, DiagnosticSourceState.Reported, DiagnosticConfidence.Medium, source + " — source-documented little-endian uint16; physical device not yet verified", DateTimeOffset.UtcNow);
@@ -266,11 +267,11 @@ public sealed class BwmReadOnlyAdapter : IProxmarkProtocol
     private static DiagnosticValue<bool> DecodeByteBool(BwmFrame? frame, string source)
     {
         if (frame is null || frame.Payload.Length != 1)
-            return new DiagnosticValue<bool>(false, DiagnosticSourceState.Unknown, DiagnosticConfidence.Unknown, source + " — expected 1-byte status", DateTimeOffset.UtcNow);
+            return new DiagnosticValue<bool>(false, false, DiagnosticSourceState.Unknown, DiagnosticConfidence.Unknown, source + " — expected 1-byte status", DateTimeOffset.UtcNow);
 
         return new DiagnosticValue<bool>(frame.Payload[0] != 0, DiagnosticSourceState.Reported, DiagnosticConfidence.Medium, source + " — source-documented uint8 status; physical device not yet verified", DateTimeOffset.UtcNow);
     }
 
     private static DiagnosticValue<T> Unknown<T>(string reason) =>
-        new(default, DiagnosticSourceState.Unknown, DiagnosticConfidence.Unknown, reason, DateTimeOffset.UtcNow);
+        DiagnosticValue<T>.Unknown(reason);
 }

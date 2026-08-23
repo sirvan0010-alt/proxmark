@@ -26,9 +26,41 @@ public enum DiagnosticConfidence
     Unknown
 }
 
-public sealed record DiagnosticValue<T>(
-    T? Value,
-    DiagnosticSourceState SourceState,
-    DiagnosticConfidence Confidence,
-    string SourceDescription,
-    DateTimeOffset Timestamp);
+public sealed record DiagnosticValue<T>
+{
+    public T Value { get; }
+    public bool HasValue { get; }
+    public DiagnosticSourceState SourceState { get; }
+    public DiagnosticConfidence Confidence { get; }
+    public string SourceDescription { get; }
+    public DateTimeOffset Timestamp { get; }
+
+    public DiagnosticValue(
+        T value,
+        DiagnosticSourceState sourceState,
+        DiagnosticConfidence confidence,
+        string sourceDescription,
+        DateTimeOffset timestamp)
+        : this(value, value is not null, sourceState, confidence, sourceDescription, timestamp)
+    {
+    }
+
+    public DiagnosticValue(
+        T value,
+        bool hasValue,
+        DiagnosticSourceState sourceState,
+        DiagnosticConfidence confidence,
+        string sourceDescription,
+        DateTimeOffset timestamp)
+    {
+        Value = value;
+        HasValue = hasValue;
+        SourceState = sourceState;
+        Confidence = confidence;
+        SourceDescription = sourceDescription;
+        Timestamp = timestamp;
+    }
+
+    public static DiagnosticValue<T> Unknown(string reason) =>
+        new(default!, false, DiagnosticSourceState.Unknown, DiagnosticConfidence.Unknown, reason, DateTimeOffset.UtcNow);
+}
