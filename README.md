@@ -255,6 +255,16 @@ Because upstream changes frequently, compatibility claims should record reposito
 
 **Stage: Windows PM5 Inspector shell added / real-hardware protocol validation pending.**
 
+### Current read-only diagnostic boundary
+
+The desktop application sends only the fixed PM3 NG command whitelist
+`CMD_VERSION`, `CMD_CAPABILITIES`, `CMD_STATUS`, and `CMD_PING`. It is not a
+general command terminal and button labels do not alter the on-wire command.
+Developer mode exposes raw responses, including interleaved diagnostic frames,
+but never enables user-entered commands. `CMD_CAPABILITIES` is decoded only for
+the documented upstream `capabilities_t` schema version 8; unknown schema
+versions are retained as raw data and reported as unknown rather than guessed.
+
 The desktop executable shell is now in the repository and CI is configured to produce a self-contained Windows package. The physical PM5 session remains read-only: identify USB/serial transport, inspect device/firmware versions, determine available PM5/BWM interfaces, and preserve the original state before any firmware update.
 
 ## Project principle

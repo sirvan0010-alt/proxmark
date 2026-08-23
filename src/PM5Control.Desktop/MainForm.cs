@@ -50,6 +50,10 @@ internal sealed class MainForm : Form
     private ToolStripButton _btnFullDiag = null!;
     private ToolStripButton _btnHelp = null!;
     private ToolStripButton _btnRefreshPorts = null!;
+    private ToolStripButton _btnDeveloper = null!;
+    private ToolStripButton _btnExport = null!;
+    private bool _developerMode;
+    private bool _operationInProgress;
 
     public MainForm()
     {
@@ -118,6 +122,13 @@ internal sealed class MainForm : Form
         _btnCapabilities = MakeToolButton("hw capabilities", async () => await RunSingleCommandAsync("hw capabilities", RunCapabilitiesAsync));
         _btnFullDiag = MakeToolButton("Full diagnostic (hw info)", async () => await RunFullDiagnosticAsync());
         _btnHelp = MakeToolButton("help", ShowHelp);
+        _btnDeveloper = new ToolStripButton("Developer mode") { CheckOnClick = true, DisplayStyle = ToolStripItemDisplayStyle.Text };
+        _btnDeveloper.CheckedChanged += (_, _) =>
+        {
+            _developerMode = _btnDeveloper.Checked;
+            Log(_developerMode ? "Developer mode enabled: raw read-only responses will be logged." : "Developer mode disabled.");
+        };
+        _btnExport = MakeToolButton("Export report", ExportReport);
         _btnRefreshPorts = MakeToolButton("Refresh ports", () => RefreshDeviceState());
 
         strip.Items.Add(_btnConnect);
@@ -129,6 +140,8 @@ internal sealed class MainForm : Form
         strip.Items.Add(new ToolStripSeparator());
         strip.Items.Add(_btnFullDiag);
         strip.Items.Add(_btnHelp);
+        strip.Items.Add(_btnDeveloper);
+        strip.Items.Add(_btnExport);
         strip.Items.Add(new ToolStripSeparator());
         strip.Items.Add(_btnRefreshPorts);
 
@@ -285,7 +298,7 @@ internal sealed class MainForm : Form
 
         _connectionValue.Text = "Device transport detected";
         _portValue.Text = port;
-        SetToolbarDeviceButtonsEnabled(true);
+        SetToolbarDeviceButtonsEnabled(!_operationInProgress);
         if (logChanges) Log($"Windows serial port detected: {port}");
     }
 
@@ -305,6 +318,7 @@ internal sealed class MainForm : Form
         if (string.IsNullOrWhiteSpace(portName) || portName.StartsWith("No ", StringComparison.OrdinalIgnoreCase))
             return;
 
+        _operationInProgress = true;
         SetToolbarDeviceButtonsEnabled(false);
         _connectionValue.Text = "Analyzing PM3/PM5 read-only protocol...";
         SetPill("QUERYING…", AccentOrange);
@@ -318,7 +332,8 @@ internal sealed class MainForm : Form
             await transport.ConnectAsync();
             Log("Serial endpoint opened successfully; DTR/RTS disabled.");
 
-            var identity = await Pm3ReadOnlyInspector.InspectAsync(transport);
+            var inspection = await Pm3ReadOnlyInspector.InspectAsync(transport);
+            var identity = inspection.Identity;
             _connectionValue.Text = "PM3/PM5 NG response received";
             _hardwareValue.Text = identity.Hardware;
             _firmwareValue.Text = identity.ArmFirmware;
@@ -329,6 +344,7 @@ internal sealed class MainForm : Form
             Log($"Hardware: {identity.Hardware}");
             Log($"ARM: {identity.ArmFirmware}");
             Log($"FPGA: {identity.FpgaFirmware}");
+            LogCapabilities(inspection.Capabilities);
             Log("CMD_VERSION and CMD_CAPABILITIES completed without a write/reset/flash operation.");
             SetPill("DEVICE OK", AccentGreen);
         }
@@ -350,6 +366,7 @@ internal sealed class MainForm : Form
         }
         finally
         {
+            _operationInProgress = false;
             SetToolbarDeviceButtonsEnabled(true);
         }
     }
@@ -364,6 +381,8 @@ internal sealed class MainForm : Form
             return;
         }
 
+        _operationInProgress = true;
+        SetToolbarDeviceButtonsEnabled(false);
         Log($"--- {label} ---");
         await using var transport = new Pm3SerialTransport(portName);
         try
@@ -375,11 +394,16 @@ internal sealed class MainForm : Form
         {
             Log($"{label} failed: {ex.Message}");
         }
+        finally
+        {
+            _operationInProgress = false;
+            SetToolbarDeviceButtonsEnabled(true);
+        }
     }
 
     private async Task RunVersionAsync(Pm3SerialTransport transport)
     {
-        var identity = await Pm3ReadOnlyInspector.InspectAsync(transport);
+        var identity = await Pm3ReadOnlyInspector.QueryVersionAsync(transport);
         _hardwareValue.Text = identity.Hardware;
         _firmwareValue.Text = identity.ArmFirmware;
         _fpgaValue.Text = identity.FpgaFirmware;
@@ -390,9 +414,8 @@ internal sealed class MainForm : Form
 
     private async Task RunCapabilitiesAsync(Pm3SerialTransport transport)
     {
-        var identity = await Pm3ReadOnlyInspector.InspectAsync(transport);
-        _hardwareValue.Text = identity.Hardware;
-        Log($"Capabilities decoded via CMD_CAPABILITIES. Hardware: {identity.Hardware}");
+        var capabilities = await Pm3ReadOnlyInspector.QueryCapabilitiesAsync(transport);
+        LogCapabilities(capabilities);
     }
 
     private async Task RunStatusAsync(Pm3SerialTransport transport)
@@ -400,12 +423,14 @@ internal sealed class MainForm : Form
         var diag = await Pm3ReadOnlyInspector.QueryStatusAsync(transport);
         Log(FormatDiagnostic(diag));
         Log("Note: CMD_STATUS payload is not decoded (format not yet hardware-verified for PM5) — raw acknowledgement only.");
+        LogRawDiagnostic(diag);
     }
 
     private async Task RunPingAsync(Pm3SerialTransport transport)
     {
         var diag = await Pm3ReadOnlyInspector.PingAsync(transport);
         Log(FormatDiagnostic(diag));
+        LogRawDiagnostic(diag);
     }
 
     private async Task RunFullDiagnosticAsync()
@@ -417,6 +442,7 @@ internal sealed class MainForm : Form
             return;
         }
 
+        _operationInProgress = true;
         SetToolbarDeviceButtonsEnabled(false);
         SetPill("FULL DIAGNOSTIC…", AccentOrange);
         Log("=== Full diagnostic (hw version + hw capabilities + hw status + hw ping) ===");
@@ -439,12 +465,43 @@ internal sealed class MainForm : Form
         }
         finally
         {
+            _operationInProgress = false;
             SetToolbarDeviceButtonsEnabled(true);
         }
     }
 
     private static string FormatDiagnostic(Pm3RawDiagnostic diag)
         => $"{diag.CommandName}: {(diag.Success ? "OK" : "FAILED")} (status={diag.Status}, reason={diag.Reason}, payload={diag.PayloadLength} bytes)";
+
+    private void LogCapabilities(Pm3CapabilitiesReport capabilities)
+    {
+        if (!capabilities.IsKnownSchema)
+        {
+            Log($"CMD_CAPABILITIES returned schema v{capabilities.SchemaVersion}; raw data retained, decoding intentionally skipped.");
+            if (_developerMode) Log($"Capabilities raw: {Convert.ToHexString(capabilities.RawPayload)}");
+            return;
+        }
+
+        _hardwareValue.Text = capabilities.IsPm5 == true ? "Proxmark5 - firmware reported" : "Proxmark3-family - PM5 flag not asserted";
+        Log($"Capabilities schema v{capabilities.SchemaVersion}; PM5={capabilities.IsPm5}; enabled: {string.Join(", ", capabilities.EnabledFeatures.DefaultIfEmpty("none"))}.");
+        if (_developerMode) Log($"Capabilities raw: {Convert.ToHexString(capabilities.RawPayload)}");
+    }
+
+    private void LogRawDiagnostic(Pm3RawDiagnostic diag)
+    {
+        if (!_developerMode) return;
+        Log($"{diag.CommandName} raw: {Convert.ToHexString(diag.Payload)}");
+        foreach (var frame in diag.DebugFrames)
+            Log($"Interleaved 0x{frame.Command:X4}: status={frame.Status}, reason={frame.Reason}, raw={Convert.ToHexString(frame.Payload)}");
+    }
+
+    private void ExportReport()
+    {
+        using var dialog = new SaveFileDialog { Filter = "Text report (*.txt)|*.txt", FileName = $"pm5-diagnostic-{DateTime.Now:yyyyMMdd-HHmmss}.txt" };
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        File.WriteAllText(dialog.FileName, $"PM5 Control Center diagnostic report{Environment.NewLine}Exported: {DateTimeOffset.Now:O}{Environment.NewLine}{Environment.NewLine}{_log.Text}");
+        Log($"Diagnostic report exported: {dialog.FileName}");
+    }
 
     private void ShowHelp()
     {
@@ -457,6 +514,8 @@ internal sealed class MainForm : Form
             "  hw ping             Liveness check (CMD_PING, 0x0109).\n" +
             "  hw capabilities     Compiled-in feature flags incl. PM5 detection (CMD_CAPABILITIES, 0x0112).\n" +
             "  Full diagnostic     Runs all four commands above in sequence and logs the results.\n" +
+            "  Developer mode      Shows raw responses and interleaved diagnostic frames; it never enables custom commands.\n" +
+            "  Export report       Saves the current local diagnostic log as a text report.\n" +
             "  Refresh ports       Re-scans Windows COM ports without touching the device.\n\n" +
             "Not implemented on purpose (destructive or FPGA/antenna-energizing):\n" +
             "  hw tune, hw fpga config, hw ant_pm5, hw bootloader, flash/reset commands.\n" +
