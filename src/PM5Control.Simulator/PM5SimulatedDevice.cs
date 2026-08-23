@@ -18,7 +18,7 @@ public sealed class PM5SimulatedDevice
             "GET_FIRMWARE_INFO" => SimulatedResponse.Unknown("Firmware information is intentionally unknown until sourced or observed."),
             "GET_CAPABILITIES" => SimulatedResponse.Unknown("Capabilities are intentionally unknown until sourced or observed."),
             "GET_BWM_STATUS" => State.BwmAvailable
-                ? SimulatedResponse.Value("BWM_AVAILABLE")
+                ? SimulatedResponse.Ok("BWM_AVAILABLE")
                 : SimulatedResponse.Unknown("BWM availability has not been verified."),
             _ => SimulatedResponse.Error("UNSUPPORTED_SIMULATED_COMMAND")
         };
@@ -27,7 +27,7 @@ public sealed class PM5SimulatedDevice
 
 public sealed record SimulatedResponse(string Status, string? Value, string Evidence)
 {
-    public static SimulatedResponse Value(string value) => new("OK", value, "SIMULATED");
+    public static SimulatedResponse Ok(string value) => new("OK", value, "SIMULATED");
     public static SimulatedResponse Unknown(string reason) => new("UNKNOWN", null, reason);
     public static SimulatedResponse Error(string reason) => new("ERROR", null, reason);
 }
