@@ -1,13 +1,14 @@
-// PM5 Control Center — BWM read-only adapter v2
+// PM5 Control Center — BWM read-only adapter v2.1
 // PURPOSE: execute the explicitly reviewed first-session BWM inspector
 // commands and decode only payload shapes documented by the verified
 // upstream command reference. Unknown/unsupported shapes remain raw or
 // UNKNOWN rather than being guessed.
 // PROVENANCE: RfidResearchGroup/Proxmark5_BWM_esp32,
-// b918166128e05455c2dcb4e232216d453bbf29ee (2026-08-08).
+// b918166128e05455c2dcb4e232216d453bbf29ee.
 // SAFETY: command authorization is centralized in BwmReadOnlyPolicy.
 // No mutating command reaches the transport through this adapter.
 
+using System.Buffers.Binary;
 using System.Text;
 using PM5Control.Core.Connections;
 using PM5Control.Core.Devices;
@@ -28,12 +29,6 @@ public sealed class BwmReadOnlyAdapter : IProxmarkProtocol
 
     public static IReadOnlySet<BwmCommandCode> AllowedCommands => BwmReadOnlyPolicy.AllowedCommands;
 
-    /// <summary>
-    /// Sends one explicitly allow-listed read-only request and validates the
-    /// returned frame, including response kind and command correlation.
-    /// Stream reassembly remains the responsibility of the transport/parser
-    /// integration layer.
-    /// </summary>
     public async Task<BwmFrame?> QueryAsync(
         BwmCommandCode command,
         ReadOnlyMemory<byte> payload = default,
@@ -66,11 +61,6 @@ public sealed class BwmReadOnlyAdapter : IProxmarkProtocol
         return frame;
     }
 
-    /// <summary>
-    /// Returns the validated payload for an allowed command without applying
-    /// an unverified interpretation to its bytes. Useful for future payload
-    /// decoding once hardware evidence is available.
-    /// </summary>
     public async Task<DiagnosticValue<byte[]>> QueryPayloadAsync(
         BwmCommandCode command,
         ReadOnlyMemory<byte> payload = default,
@@ -98,9 +88,7 @@ public sealed class BwmReadOnlyAdapter : IProxmarkProtocol
     public Task<DiagnosticValue<string>> GetVersionInfoAsync(CancellationToken cancellationToken = default) =>
         QueryAndDecodeStringAsync(BwmCommandCode.GetVersionInfo, "APP_CMD_GET_VERSION_INFO", cancellationToken);
 
-    public Task<DiagnosticValue<string>> GetDeviceModelAsync(CancellationToken cancellationToken = default) =>
-        QueryAndDecodeStringAsync(BwmCommandCode.GetDeviceModel, "APP_CMD_GET_DEVICE_MODEL", cancellationToken);
-
+    /// <summary>Returns the source-documented uint16 device model ID. It is not a string.</summary>
     public async Task<DiagnosticValue<ushort>> GetDeviceModelIdAsync(CancellationToken cancellationToken = default)
     {
         var frame = await QueryAsync(BwmCommandCode.GetDeviceModel, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -110,11 +98,8 @@ public sealed class BwmReadOnlyAdapter : IProxmarkProtocol
     public Task<DiagnosticValue<long>> GetSysFreeHeapAsync(CancellationToken cancellationToken = default) =>
         QueryAndDecodeUInt32Async(BwmCommandCode.GetSysFreeHeap, "APP_CMD_GET_SYS_FREE_HEAP", cancellationToken);
 
-    public async Task<DiagnosticValue<long>> GetSysTimestampAsync(CancellationToken cancellationToken = default)
-    {
-        var frame = await QueryAsync(BwmCommandCode.GetSysTimestamp, cancellationToken: cancellationToken).ConfigureAwait(false);
-        return DecodeUInt32(frame, "APP_CMD_GET_SYS_TIMESTAMP");
-    }
+    public Task<DiagnosticValue<long>> GetSysTimestampAsync(CancellationToken cancellationToken = default) =>
+        QueryAndDecodeUInt32Async(BwmCommandCode.GetSysTimestamp, "APP_CMD_GET_SYS_TIMESTAMP", cancellationToken);
 
     public Task<DiagnosticValue<string>> GetAppCompileDatetimeAsync(CancellationToken cancellationToken = default) =>
         QueryAndDecodeStringAsync(BwmCommandCode.GetAppCompileDatetime, "APP_CMD_GET_APP_COMPILE_DATETIME", cancellationToken);
@@ -125,17 +110,15 @@ public sealed class BwmReadOnlyAdapter : IProxmarkProtocol
     public async Task<DiagnosticValue<string>> GetSysBaseMacAddrAsync(CancellationToken cancellationToken = default)
     {
         var frame = await QueryAsync(BwmCommandCode.GetSysBaseMacAddr, cancellationToken: cancellationToken).ConfigureAwait(false);
-        if (frame is null || (frame.Payload.Length != 6 && frame.Payload.Length != 8))
-        {
-            return Unknown<string>("APP_CMD_GET_SYS_BASE_MAC_ADDR — no response or unsupported payload length");
-        }
+        if (frame is null || frame.Payload.Length != 6)
+            return Unknown<string>("APP_CMD_GET_SYS_BASE_MAC_ADDR — expected exactly 6-byte MAC payload");
 
         var mac = string.Join(":", frame.Payload.Select(b => b.ToString("X2")));
         return new DiagnosticValue<string>(
             mac,
             DiagnosticSourceState.Reported,
             DiagnosticConfidence.Medium,
-            "APP_CMD_GET_SYS_BASE_MAC_ADDR — 6/8-byte source-documented form; physical device not yet verified",
+            "APP_CMD_GET_SYS_BASE_MAC_ADDR — source-documented 6-byte MAC; physical device not yet verified",
             DateTimeOffset.UtcNow);
     }
 
@@ -176,7 +159,7 @@ public sealed class BwmReadOnlyAdapter : IProxmarkProtocol
     {
         var frame = await QueryAsync(BwmCommandCode.GetLogLevel, cancellationToken: cancellationToken).ConfigureAwait(false);
         if (frame is null || frame.Payload.Length != 1)
-            return new DiagnosticValue<byte>(0, DiagnosticSourceState.Unknown, DiagnosticConfidence.Unknown, "APP_CMD_GET_LOG_LEVEL — no valid 1-byte response", DateTimeOffset.UtcNow);
+            return new DiagnosticValue<byte>(0, DiagnosticSourceState.Unknown, DiagnosticConfidence.Unknown, "APP_CMD_GET_LOG_LEVEL — expected 1-byte uint8", DateTimeOffset.UtcNow);
 
         return new DiagnosticValue<byte>(frame.Payload[0], DiagnosticSourceState.Reported, DiagnosticConfidence.Medium, "APP_CMD_GET_LOG_LEVEL — source-documented uint8", DateTimeOffset.UtcNow);
     }
@@ -187,13 +170,36 @@ public sealed class BwmReadOnlyAdapter : IProxmarkProtocol
         return DecodeByteBool(frame, "APP_CMD_GET_SYS_READY_STATUS");
     }
 
+    /// <summary>
+    /// Produces a human-readable identity assessment. A BWM endpoint is not
+    /// treated as proof of PM5 hardware: PM3/Iceman/RRG variants require
+    /// independent USB/hardware evidence before any family or firmware branch
+    /// is recommended.
+    /// </summary>
+    public async Task<BwmIdentityAssessment> AssessIdentityAsync(
+        string? usbVidPid = null,
+        string? armFirmware = null,
+        string? fpgaFirmware = null,
+        CancellationToken cancellationToken = default)
+    {
+        var model = await GetDeviceModelIdAsync(cancellationToken).ConfigureAwait(false);
+        var version = await GetVersionInfoAsync(cancellationToken).ConfigureAwait(false);
+
+        return BwmIdentityInspector.Assess(
+            model.Value,
+            version.Value,
+            usbVidPid,
+            armFirmware,
+            fpgaFirmware);
+    }
+
     public async Task<ProxmarkDeviceInfo> ReadDeviceInfoAsync(CancellationToken cancellationToken = default)
     {
         var unknownString = Unknown<string>("Not queried by BwmReadOnlyAdapter");
         var unknownLong = Unknown<long>("Not queried by BwmReadOnlyAdapter");
         var unknownDouble = Unknown<double>("Not queried by BwmReadOnlyAdapter");
 
-        var esp32Model = await GetDeviceModelAsync(cancellationToken).ConfigureAwait(false);
+        var model = await GetDeviceModelIdAsync(cancellationToken).ConfigureAwait(false);
         var bwmFirmware = await GetVersionInfoAsync(cancellationToken).ConfigureAwait(false);
 
         return new ProxmarkDeviceInfo(
@@ -204,7 +210,12 @@ public sealed class BwmReadOnlyAdapter : IProxmarkProtocol
             FpgaFirmware: unknownString,
             BwmFirmware: bwmFirmware,
             MemoryBytes: unknownLong,
-            Esp32Model: esp32Model,
+            Esp32Model: new DiagnosticValue<string>(
+                model.Value.HasValue ? $"0x{model.Value.Value:X4}" : null,
+                model.SourceState,
+                model.Confidence,
+                "APP_CMD_GET_DEVICE_MODEL — uint16 model ID; this value alone does not prove PM5/PM3/Iceman/RRG hardware family",
+                DateTimeOffset.UtcNow),
             WifiStatus: unknownString,
             BluetoothStatus: unknownString,
             PowerStatus: unknownString,
@@ -239,21 +250,17 @@ public sealed class BwmReadOnlyAdapter : IProxmarkProtocol
         if (frame is null || frame.Payload.Length != 4)
             return new DiagnosticValue<long>(null, DiagnosticSourceState.Unknown, DiagnosticConfidence.Unknown, source + " — expected 4-byte uint32", DateTimeOffset.UtcNow);
 
-        long value = frame.Payload[0]
-            | ((long)frame.Payload[1] << 8)
-            | ((long)frame.Payload[2] << 16)
-            | ((long)frame.Payload[3] << 24);
-
+        uint value = BinaryPrimitives.ReadUInt32LittleEndian(frame.Payload);
         return new DiagnosticValue<long>(value, DiagnosticSourceState.Reported, DiagnosticConfidence.Medium, source + " — source-documented little-endian uint32; physical device not yet verified", DateTimeOffset.UtcNow);
     }
 
     private static DiagnosticValue<ushort> DecodeUInt16(BwmFrame? frame, string source)
     {
         if (frame is null || frame.Payload.Length != 2)
-            return new DiagnosticValue<ushort>(0, DiagnosticSourceState.Unknown, DiagnosticConfidence.Unknown, source + " — expected 2-byte model ID", DateTimeOffset.UtcNow);
+            return new DiagnosticValue<ushort>(null, DiagnosticSourceState.Unknown, DiagnosticConfidence.Unknown, source + " — expected 2-byte uint16", DateTimeOffset.UtcNow);
 
-        ushort value = (ushort)(frame.Payload[0] | (frame.Payload[1] << 8));
-        return new DiagnosticValue<ushort>(value, DiagnosticSourceState.Reported, DiagnosticConfidence.Medium, source + " — source-documented uint16 model ID; physical device not yet verified", DateTimeOffset.UtcNow);
+        ushort value = BinaryPrimitives.ReadUInt16LittleEndian(frame.Payload);
+        return new DiagnosticValue<ushort>(value, DiagnosticSourceState.Reported, DiagnosticConfidence.Medium, source + " — source-documented little-endian uint16; physical device not yet verified", DateTimeOffset.UtcNow);
     }
 
     private static DiagnosticValue<bool> DecodeByteBool(BwmFrame? frame, string source)
