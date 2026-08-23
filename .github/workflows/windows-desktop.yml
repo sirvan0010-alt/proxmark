@@ -1,0 +1,45 @@
+name: Windows Desktop
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-desktop:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build and test Core
+        run: dotnet test tests/PM5Control.Core.Tests/PM5Control.Core.Tests.csproj --configuration Release
+
+      - name: Publish PM5 Control Center
+        run: >-
+          dotnet publish src/PM5Control.Desktop/PM5Control.Desktop.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          --output artifacts/PM5Control-Windows
+
+      - name: Create ZIP package
+        shell: pwsh
+        run: Compress-Archive -Path artifacts/PM5Control-Windows/* -DestinationPath artifacts/PM5Control-Windows.zip
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: PM5Control-Windows
+          path: artifacts/PM5Control-Windows.zip
