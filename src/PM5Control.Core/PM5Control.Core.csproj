@@ -6,4 +6,7 @@
     <RootNamespace>PM5Control.Core</RootNamespace>
     <AssemblyName>PM5Control.Core</AssemblyName>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.IO.Ports" Version="10.0.0" />
+  </ItemGroup>
 </Project>
