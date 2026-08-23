@@ -7,6 +7,7 @@
  */
 
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace PM5Control.Core.Diagnostics;
 
@@ -15,7 +16,8 @@ public static class DiagnosticReportExporter
     private static readonly JsonSerializerOptions Options = new()
     {
         WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Converters = { new JsonStringEnumConverter() }
     };
 
     public static string ToJson(DiagnosticReport report)
