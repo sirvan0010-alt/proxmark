@@ -13,10 +13,10 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
 
@@ -39,13 +39,13 @@ jobs:
         run: Compress-Archive -Path artifacts/PM5Control-Windows/* -DestinationPath artifacts/PM5Control-Windows.zip
 
       - name: Upload Windows ZIP package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: PM5Control-Windows
           path: artifacts/PM5Control-Windows.zip
 
       - name: Upload Windows executable
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: PM5Control-EXE
           path: artifacts/PM5Control-Windows/PM5Control.Desktop.exe
