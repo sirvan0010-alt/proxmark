@@ -14,6 +14,7 @@ public sealed record Pm3RawDiagnostic(
     bool Success,
     sbyte Status,
     sbyte Reason,
+    byte[] RequestFrame,
     byte[] Payload,
     byte[] RawResponseFrame,
     IReadOnlyList<Pm3NgResponse> DebugFrames)
@@ -44,6 +45,7 @@ public static class Pm3ReadOnlyInspector
             response.Status == 0,
             response.Status,
             response.Reason,
+            exchange.RequestFrame,
             response.Payload,
             response.RawFrame,
             exchange.DebugFrames);
