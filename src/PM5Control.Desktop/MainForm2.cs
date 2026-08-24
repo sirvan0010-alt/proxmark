@@ -12,7 +12,7 @@ internal sealed class MainForm2 : Form
     private static readonly Color Bg = Color.FromArgb(18, 20, 24);
     private static readonly Color Panel = Color.FromArgb(26, 29, 35);
     private static readonly Color LogBg = Color.FromArgb(10, 12, 15);
-    private static readonly Color Text = Color.FromArgb(226, 230, 236);
+    private static readonly Color TextColor = Color.FromArgb(226, 230, 236);
     private static readonly Color Muted = Color.FromArgb(145, 153, 164);
     private static readonly Color Orange = Color.FromArgb(255, 122, 24);
     private static readonly Color Green = Color.FromArgb(94, 214, 130);
@@ -42,7 +42,7 @@ internal sealed class MainForm2 : Form
         MinimumSize = new Size(980, 680);
         Size = new Size(1120, 760);
         BackColor = Bg;
-        ForeColor = Text;
+        ForeColor = TextColor;
         Font = new Font("Segoe UI", 10F);
         BuildUi();
         RefreshPorts();
@@ -67,7 +67,7 @@ internal sealed class MainForm2 : Form
         header.Controls.Add(left, 0, 0); header.Controls.Add(status, 1, 0);
         root.Controls.Add(header, 0, 0);
 
-        var tabs = new TabControl { Dock = DockStyle.Fill, BackColor = Bg, ForeColor = Text, Padding = new Point(14, 6) };
+        var tabs = new TabControl { Dock = DockStyle.Fill, BackColor = Bg, ForeColor = TextColor, Padding = new Point(14, 6) };
         tabs.TabPages.Add(BuildDeviceTab());
         tabs.TabPages.Add(BuildConsoleTab());
         tabs.TabPages.Add(BuildDiagnosticsTab());
@@ -125,9 +125,9 @@ internal sealed class MainForm2 : Form
         return page;
     }
 
-    private static TabPage Page(string text) => new(text) { BackColor = Bg, ForeColor = Text };
+    private static TabPage Page(string text) => new(text) { BackColor = Bg, ForeColor = TextColor };
 
-    private static Label ValueLabel() => new() { Dock = DockStyle.Fill, Text = "UNKNOWN", TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Consolas", 10F, FontStyle.Bold), ForeColor = Text };
+    private static Label ValueLabel() => new() { Dock = DockStyle.Fill, Text = "UNKNOWN", TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Consolas", 10F, FontStyle.Bold), ForeColor = TextColor };
 
     private static void AddRow(TableLayoutPanel grid, int row, string name, Label value)
     {
