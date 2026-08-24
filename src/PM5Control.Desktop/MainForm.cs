@@ -14,7 +14,6 @@ namespace PM5Control.Desktop;
 /// </summary>
 internal sealed class MainForm : Form
 {
-    // ---- Proxmark5 theme palette ----
     private static readonly Color BgPanel = Color.FromArgb(18, 20, 24);
     private static readonly Color BgControl = Color.FromArgb(26, 29, 35);
     private static readonly Color BgLog = Color.FromArgb(12, 13, 16);
@@ -75,10 +74,6 @@ internal sealed class MainForm : Form
         _timer.Start();
     }
 
-    // ------------------------------------------------------------------
-    // UI construction
-    // ------------------------------------------------------------------
-
     private void BuildUi()
     {
         var root = new TableLayoutPanel
@@ -88,10 +83,10 @@ internal sealed class MainForm : Form
             RowCount = 4,
             BackColor = BgPanel,
         };
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));   // toolbar
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));   // header
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 210)); // status grid
-        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));  // log
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 210));
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         Controls.Add(root);
 
         root.Controls.Add(BuildToolbar(), 0, 0);
@@ -144,7 +139,6 @@ internal sealed class MainForm : Form
         strip.Items.Add(_btnExport);
         strip.Items.Add(new ToolStripSeparator());
         strip.Items.Add(_btnRefreshPorts);
-
         return strip;
     }
 
@@ -183,13 +177,7 @@ internal sealed class MainForm : Form
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
         var titleBox = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, AutoSize = true, BackColor = BgPanel };
-        var title = new Label
-        {
-            Text = "PROXMARK5",
-            AutoSize = true,
-            Font = FontTitle,
-            ForeColor = AccentOrange,
-        };
+        var title = new Label { Text = "PROXMARK5", AutoSize = true, Font = FontTitle, ForeColor = AccentOrange };
         var subtitle = new Label
         {
             Text = "CONTROL CENTER  ·  read-only BWM / ESP32 diagnostic inspector",
@@ -276,11 +264,6 @@ internal sealed class MainForm : Form
         _statusPill.BackColor = color;
     }
 
-    // ------------------------------------------------------------------
-    // Device actions - every path below sends only whitelisted read-only
-    // PM3 NG commands (CMD_VERSION / CMD_CAPABILITIES / CMD_STATUS / CMD_PING).
-    // ------------------------------------------------------------------
-
     private void RefreshDeviceState(bool logChanges = true)
     {
         var ports = GetSerialPorts();
@@ -315,8 +298,7 @@ internal sealed class MainForm : Form
     private async Task ConnectReadOnlyAsync()
     {
         var portName = _portValue.Text;
-        if (string.IsNullOrWhiteSpace(portName) || portName.StartsWith("No ", StringComparison.OrdinalIgnoreCase))
-            return;
+        if (string.IsNullOrWhiteSpace(portName) || portName.StartsWith("No ", StringComparison.OrdinalIgnoreCase)) return;
 
         _operationInProgress = true;
         SetToolbarDeviceButtonsEnabled(false);
@@ -331,7 +313,6 @@ internal sealed class MainForm : Form
         {
             await transport.ConnectAsync();
             Log("Serial endpoint opened successfully; DTR/RTS disabled.");
-
             var inspection = await Pm3ReadOnlyInspector.InspectAsync(transport);
             var identity = inspection.Identity;
             _connectionValue.Text = "PM3/PM5 NG response received";
@@ -371,7 +352,6 @@ internal sealed class MainForm : Form
         }
     }
 
-    /// <summary>Shared wrapper for the individual toolbar diagnostic buttons.</summary>
     private async Task RunSingleCommandAsync(string label, Func<Pm3SerialTransport, Task> action)
     {
         var portName = _portValue.Text;
@@ -482,8 +462,10 @@ internal sealed class MainForm : Form
             return;
         }
 
-        _hardwareValue.Text = capabilities.IsPm5 == true ? "Proxmark5 - firmware reported" : "Proxmark3-family - PM5 flag not asserted";
-        Log($"Capabilities schema v{capabilities.SchemaVersion}; PM5={capabilities.IsPm5}; enabled: {string.Join(", ", capabilities.EnabledFeatures.DefaultIfEmpty("none"))}.");
+        _hardwareValue.Text = capabilities.IsKnownSchema
+            ? $"RDV4 hw flag: {(capabilities.IsRdv4 ? "yes" : "no")} - CMD_CAPABILITIES has no PM5-specific bit"
+            : $"Unknown CMD_CAPABILITIES schema (v{capabilities.SchemaVersion})";
+        Log($"Capabilities schema v{capabilities.SchemaVersion}; RDV4={capabilities.IsRdv4}; enabled: {string.Join(", ", capabilities.EnabledFeatures.DefaultIfEmpty("none"))}.");
         if (_developerMode) Log($"Capabilities raw: {Convert.ToHexString(capabilities.RawPayload)}");
     }
 
@@ -512,7 +494,7 @@ internal sealed class MainForm : Form
             "  hw version          Query firmware/ARM/FPGA version string (CMD_VERSION, 0x0107).\n" +
             "  hw status           Runtime status acknowledgement (CMD_STATUS, 0x0108, raw/unparsed).\n" +
             "  hw ping             Liveness check (CMD_PING, 0x0109).\n" +
-            "  hw capabilities     Compiled-in feature flags incl. PM5 detection (CMD_CAPABILITIES, 0x0112).\n" +
+            "  hw capabilities     Compiled-in feature flags; no PM5-specific bit exists (CMD_CAPABILITIES, 0x0112).\n" +
             "  Full diagnostic     Runs all four commands above in sequence and logs the results.\n" +
             "  Developer mode      Shows raw responses and interleaved diagnostic frames; it never enables custom commands.\n" +
             "  Export report       Saves the current local diagnostic log as a text report.\n" +
@@ -542,15 +524,12 @@ internal sealed class MainForm : Form
     {
         var result = new List<string>();
         using var key = Registry.LocalMachine.OpenSubKey(@"HARDWARE\DEVICEMAP\SERIALCOMM");
-        if (key is null)
-            return result;
-
+        if (key is null) return result;
         foreach (var valueName in key.GetValueNames())
         {
             if (key.GetValue(valueName) is string port && !string.IsNullOrWhiteSpace(port))
                 result.Add(port);
         }
-
         return result.OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
@@ -564,7 +543,6 @@ internal sealed class MainForm : Form
         base.Dispose(disposing);
     }
 
-    /// <summary>Minimal dark/orange renderer so the toolbar matches the PM5 case colourway.</summary>
     private sealed class Pm5ToolbarRenderer : ToolStripProfessionalRenderer
     {
         public Pm5ToolbarRenderer() : base(new Pm5ColorTable()) { }
