@@ -1,0 +1,1 @@
+Temporary CI verification marker for the PM5 capabilities v7 fix. This file is not part of the application and may be removed after the Windows build artifact is verified.
