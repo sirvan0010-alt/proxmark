@@ -8,6 +8,7 @@ internal static class DeveloperUiPatcher
 {
     private static bool _developerMode;
     private static IReadOnlyList<string> _enabledButtons = Array.Empty<string>();
+    private static readonly AppSettings Settings = AppSettings.Load();
 
     public static void Install(MainForm form) => ConfigureToolbar(form);
 
@@ -29,21 +30,54 @@ internal static class DeveloperUiPatcher
         strip.Items.Add(settings);
     }
 
+    private static readonly IReadOnlyDictionary<string, string> ButtonCommandInfo = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Connect / analyze"] = "CMD_VERSION (0x0107) + CMD_CAPABILITIES (0x0112)",
+        ["hw version"] = "CMD_VERSION (0x0107)",
+        ["hw status"] = "CMD_STATUS (0x0108) - raw/unparsed",
+        ["hw ping"] = "CMD_PING (0x0109)",
+        ["hw capabilities"] = "CMD_CAPABILITIES (0x0112)",
+        ["Full diagnostic (hw info)"] = "CMD_VERSION + CMD_CAPABILITIES + CMD_STATUS + CMD_PING",
+        ["Probe read-only commands"] = "9 commands: VERSION/STATUS/PING/CAPABILITIES/DBGMODE/FLASHMEM x3/LF_SAMPLING_CFG",
+        ["help"] = "local only - lists this tool's own commands, does not query the device",
+        ["Refresh ports"] = "local only - re-scans Windows COM ports",
+    };
+
     private static void ShowSettings(Form owner, ToolStrip strip)
     {
         var names = strip.Items.OfType<ToolStripButton>()
             .Where(x => x.Text is not "Settings" and not "Probe read-only commands" and not "Refresh ports")
             .Select(x => x.Text).ToArray();
         var enabled = _enabledButtons.Count == 0 ? names : _enabledButtons;
-        using var dialog = new DeveloperSettingsForm(_developerMode, names, enabled);
+        var commsMode = DescribeCommsMode();
+        using var dialog = new DeveloperSettingsForm(_developerMode, names, enabled, ButtonCommandInfo, Settings.EspIpAddress, Settings.EspTcpPort, commsMode);
         if (dialog.ShowDialog(owner) != DialogResult.OK) return;
         _developerMode = dialog.DeveloperMode;
         _enabledButtons = dialog.EnabledButtons();
+        Settings.EspIpAddress = dialog.EspIpAddress;
+        Settings.EspTcpPort = dialog.EspTcpPort;
+        Settings.Save();
         foreach (var button in strip.Items.OfType<ToolStripButton>())
         {
             if (button.Text is "Settings" or "Probe read-only commands" or "Refresh ports") continue;
             button.Visible = !_developerMode || _enabledButtons.Contains(button.Text, StringComparer.OrdinalIgnoreCase);
         }
+    }
+
+    /// <summary>
+    /// Reports what this build actually knows about the current transport - honestly.
+    /// No Wi-Fi/BLE probing exists yet; only the USB/COM3 detection already used elsewhere.
+    /// </summary>
+    private static string DescribeCommsMode()
+    {
+        var ports = GetSerialPorts();
+        var usbLine = ports.Count > 0
+            ? $"USB/Serial: detected on {string.Join(", ", ports)}"
+            : "USB/Serial: no COM port detected";
+        var wifiLine = string.IsNullOrWhiteSpace(Settings.EspIpAddress)
+            ? "Wi-Fi/BLE: no ESP32 IP configured - not probed"
+            : $"Wi-Fi/BLE: IP configured ({Settings.EspIpAddress}:{Settings.EspTcpPort}) but TCP transport not yet implemented in this build";
+        return usbLine + "\n" + wifiLine;
     }
 
     private static async Task RunProbeAsync(Form owner)
