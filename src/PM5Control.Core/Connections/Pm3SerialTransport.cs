@@ -39,10 +39,9 @@ public sealed class Pm3SerialTransport : IAsyncDisposable
     }
 
     /// <summary>
-    /// Sends one whitelisted command and returns the first complete response frame.
-    /// Known debug-print frames are retained separately. Unexpected command identifiers
-    /// are deliberately preserved as diagnostic responses instead of being discarded,
-    /// so protocol mismatches can be investigated from the exact raw frame.
+    /// Sends one whitelisted command. The exact TX frame and every RX response frame
+    /// belonging to the transaction are retained so command/response synchronization
+    /// can be diagnosed without guessing from decoded payloads.
     /// </summary>
     public async Task<Pm3NgExchange> SendReadOnlyAsync(ushort command, CancellationToken cancellationToken = default)
     {
@@ -73,7 +72,7 @@ public sealed class Pm3SerialTransport : IAsyncDisposable
                 debugFrames.Add(response);
                 continue;
             }
-            return new Pm3NgExchange(response, debugFrames);
+            return new Pm3NgExchange(request, response, debugFrames);
         }
     }
 
