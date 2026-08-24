@@ -48,6 +48,10 @@ public sealed class Pm3SerialTransport : IAsyncDisposable
     /// The transaction has both a hard wall-clock deadline and a maximum unmatched
     /// frame budget so a response storm can never trap the caller in an unbounded loop.
     /// No command is retransmitted automatically.
+    ///
+    /// When a response storm occurs, the exception includes the exact request frame
+    /// and the last unmatched response frame. This is intentionally read-only diagnostic
+    /// data so PM5 protocol framing can be compared against an upstream client.
     /// </summary>
     public async Task<Pm3NgExchange> SendReadOnlyAsync(ushort command, CancellationToken cancellationToken = default)
     {
@@ -72,22 +76,22 @@ public sealed class Pm3SerialTransport : IAsyncDisposable
 
             var remainingMs = GetRemainingMilliseconds(deadline);
             if (remainingMs <= 0)
-                throw new TimeoutException($"PM3 transaction timed out waiting for CMD 0x{command:X4}; unmatched={unmatchedResponses.Count}, debug={debugFrames.Count}.");
+                throw new TimeoutException($"PM3 transaction timed out waiting for CMD 0x{command:X4}; unmatched={unmatchedResponses.Count}, debug={debugFrames.Count}; TX={Hex(request)}");
 
             var header = await ReadExactAsync(port.BaseStream, Pm3NgFrame.ResponseHeaderSize, timeout.Token, remainingMs).ConfigureAwait(false);
             if (!Pm3NgFrame.TryGetResponseLength(header, out var totalLength))
-                throw new InvalidDataException("PM3 endpoint did not return a valid NG response header.");
+                throw new InvalidDataException($"PM3 endpoint did not return a valid NG response header; TX={Hex(request)}; RX_HEADER={Hex(header)}");
 
             remainingMs = GetRemainingMilliseconds(deadline);
             if (remainingMs <= 0)
-                throw new TimeoutException($"PM3 transaction timed out while reading CMD 0x{command:X4}; unmatched={unmatchedResponses.Count}, debug={debugFrames.Count}.");
+                throw new TimeoutException($"PM3 transaction timed out while reading CMD 0x{command:X4}; unmatched={unmatchedResponses.Count}, debug={debugFrames.Count}; TX={Hex(request)}");
 
             var tail = await ReadExactAsync(port.BaseStream, totalLength - header.Length, timeout.Token, remainingMs).ConfigureAwait(false);
             var frame = new byte[totalLength];
             Buffer.BlockCopy(header, 0, frame, 0, header.Length);
             Buffer.BlockCopy(tail, 0, frame, header.Length, tail.Length);
             if (!Pm3NgFrame.TryDecodeResponse(frame, out var response) || response is null)
-                throw new InvalidDataException("PM3 endpoint returned an invalid NG response frame.");
+                throw new InvalidDataException($"PM3 endpoint returned an invalid NG response frame; TX={Hex(request)}; RX={Hex(frame)}");
 
             if (Pm3CommandCode.IsDebugResponse(response.Command))
             {
@@ -101,7 +105,10 @@ public sealed class Pm3SerialTransport : IAsyncDisposable
             unmatchedResponses.Add(response);
             if (unmatchedResponses.Count >= MaxUnmatchedResponses)
             {
-                throw new TimeoutException($"PM3 response storm detected while waiting for CMD 0x{command:X4}; received {unmatchedResponses.Count} unmatched frames, last=0x{response.Command:X4}.");
+                throw new TimeoutException(
+                    $"PM3 response storm detected while waiting for CMD 0x{command:X4}; " +
+                    $"received {unmatchedResponses.Count} unmatched frames, last=0x{response.Command:X4}; " +
+                    $"TX={Hex(request)}; RX_LAST={Hex(response.RawFrame)}");
             }
         }
     }
@@ -113,6 +120,8 @@ public sealed class Pm3SerialTransport : IAsyncDisposable
         var remainingMs = (long)Math.Ceiling(remainingTicks * 1000.0 / Stopwatch.Frequency);
         return remainingMs > int.MaxValue ? int.MaxValue : (int)remainingMs;
     }
+
+    private static string Hex(byte[] bytes) => Convert.ToHexString(bytes);
 
     private static async Task<byte[]> ReadExactAsync(Stream stream, int count, CancellationToken cancellationToken, int timeoutMs)
     {
