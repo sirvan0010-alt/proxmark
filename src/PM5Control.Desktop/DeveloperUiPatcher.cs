@@ -70,10 +70,12 @@ internal static class DeveloperUiPatcher
                 try
                 {
                     var result = await Pm3ReadOnlyInspector.QueryAsync(transport, item.Command, item.Name);
-                    dialog.Append($"{item.Name} (0x{item.Command:X4}): {(result.Success ? "OK" : "REJECTED")}, status={result.Status}, reason={result.Reason}, payload={result.PayloadLength} bytes");
-                    dialog.Append($"  raw: {Convert.ToHexString(result.Payload)}");
+                    var match = result.ResponseCommandMatches ? "MATCH" : $"MISMATCH expected 0x{result.ExpectedCommand:X4}, got 0x{result.ResponseCommand:X4}";
+                    dialog.Append($"{item.Name} (0x{item.Command:X4}): {(result.Success ? "OK" : "REJECTED")}, {match}, status={result.Status}, reason={result.Reason}, payload={result.PayloadLength} bytes");
+                    dialog.Append($"  response raw: {Convert.ToHexString(result.RawResponseFrame)}");
+                    dialog.Append($"  payload:       {Convert.ToHexString(result.Payload)}");
                     foreach (var frame in result.DebugFrames)
-                        dialog.Append($"  debug 0x{frame.Command:X4}: {Convert.ToHexString(frame.Payload)}");
+                        dialog.Append($"  debug 0x{frame.Command:X4}: {Convert.ToHexString(frame.RawFrame)}");
                 }
                 catch (Exception ex)
                 {
