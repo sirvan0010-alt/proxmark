@@ -6,14 +6,6 @@ namespace PM5Control.Core.Protocols.Pm3;
 
 public sealed record Pm3ReadOnlyIdentity(string Hardware, string ArmFirmware, string FpgaFirmware, string Details);
 public sealed record Pm3CapabilitiesReport(int SchemaVersion, bool IsKnownSchema, bool? IsPm5, IReadOnlyList<string> EnabledFeatures, byte[] RawPayload);
-
-/// <summary>
-/// Raw, undecoded result of a single read-only PM3 NG diagnostic command.
-/// Payload is intentionally left as bytes: CMD_STATUS's on-wire layout varies
-/// across firmware revisions and has not been hardware-verified for PM5, so
-/// this class only reports that the device answered, not what the answer means.
-/// Confidence is therefore capped at "raw / unparsed" until verified on real hardware.
-/// </summary>
 public sealed record Pm3RawDiagnostic(string CommandName, bool Success, sbyte Status, sbyte Reason, byte[] Payload, IReadOnlyList<Pm3NgResponse> DebugFrames)
 {
     public int PayloadLength => Payload.Length;
@@ -21,20 +13,19 @@ public sealed record Pm3RawDiagnostic(string CommandName, bool Success, sbyte St
 
 public static class Pm3ReadOnlyInspector
 {
-    /// <summary>Sends CMD_STATUS (0x0108). Read-only. Payload is not decoded - see Pm3RawDiagnostic remarks.</summary>
     public static async Task<Pm3RawDiagnostic> QueryStatusAsync(Pm3SerialTransport transport, CancellationToken cancellationToken = default)
-    {
-        var exchange = await transport.SendReadOnlyAsync(Pm3CommandCode.Status, cancellationToken).ConfigureAwait(false);
-        var response = exchange.Response;
-        return new Pm3RawDiagnostic("CMD_STATUS", response.Status == 0, response.Status, response.Reason, response.Payload, exchange.DebugFrames);
-    }
+        => await QueryAsync(transport, Pm3CommandCode.Status, "CMD_STATUS", cancellationToken).ConfigureAwait(false);
 
-    /// <summary>Sends CMD_PING (0x0109). Read-only liveness check; device is expected to echo status 0.</summary>
     public static async Task<Pm3RawDiagnostic> PingAsync(Pm3SerialTransport transport, CancellationToken cancellationToken = default)
+        => await QueryAsync(transport, Pm3CommandCode.Ping, "CMD_PING", cancellationToken).ConfigureAwait(false);
+
+    public static async Task<Pm3RawDiagnostic> QueryAsync(Pm3SerialTransport transport, ushort command, string name, CancellationToken cancellationToken = default)
     {
-        var exchange = await transport.SendReadOnlyAsync(Pm3CommandCode.Ping, cancellationToken).ConfigureAwait(false);
+        if (!Pm3CommandCode.IsSafeReadOnlyProbe(command))
+            throw new ArgumentOutOfRangeException(nameof(command), $"Command 0x{command:X4} is not on the safe read-only probe whitelist.");
+        var exchange = await transport.SendReadOnlyAsync(command, cancellationToken).ConfigureAwait(false);
         var response = exchange.Response;
-        return new Pm3RawDiagnostic("CMD_PING", response.Status == 0, response.Status, response.Reason, response.Payload, exchange.DebugFrames);
+        return new Pm3RawDiagnostic(name, response.Status == 0, response.Status, response.Reason, response.Payload, exchange.DebugFrames);
     }
 
     public static async Task<Pm3ReadOnlyIdentity> QueryVersionAsync(Pm3SerialTransport transport, CancellationToken cancellationToken = default)
@@ -65,7 +56,6 @@ public static class Pm3ReadOnlyInspector
         return (identity with { Hardware = hardware }, capabilities);
     }
 
-    /// <summary>Decodes only the upstream packed capabilities_t version 8 layout. Other layouts remain raw/unknown.</summary>
     public static Pm3CapabilitiesReport DecodeCapabilities(byte[] payload)
     {
         var version = payload.Length == 0 ? -1 : payload[0];
