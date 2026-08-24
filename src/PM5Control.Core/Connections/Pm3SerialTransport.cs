@@ -7,6 +7,8 @@ namespace PM5Control.Core.Connections;
 public sealed class Pm3SerialTransport : IAsyncDisposable
 {
     private const int MaxUnmatchedResponses = 32;
+    private const ushort CmdStatus = 0x0108;
+    private const ushort CmdDownloadedBigBuf = 0x0208;
 
     private readonly string _portName;
     private readonly int _baudRate;
@@ -43,15 +45,10 @@ public sealed class Pm3SerialTransport : IAsyncDisposable
 
     /// <summary>
     /// Sends one whitelisted command and correlates the response by command ID.
-    /// Debug-print frames are retained separately. Non-debug responses for another
-    /// command are retained as unmatched frames and do not terminate the transaction.
-    /// The transaction has both a hard wall-clock deadline and a maximum unmatched
-    /// frame budget so a response storm can never trap the caller in an unbounded loop.
-    /// No command is retransmitted automatically.
-    ///
-    /// When a response storm occurs, the exception includes the exact request frame
-    /// and the last unmatched response frame. This is intentionally read-only diagnostic
-    /// data so PM5 protocol framing can be compared against an upstream client.
+    /// Debug-print frames are retained separately. For CMD_STATUS, the PM3 firmware
+    /// may emit CMD_DOWNLOADED_BIGBUF (0x0208) as an auxiliary response before the
+    /// final CMD_STATUS response. That frame is therefore ignored for correlation,
+    /// but the hard transaction deadline remains in force.
     /// </summary>
     public async Task<Pm3NgExchange> SendReadOnlyAsync(ushort command, CancellationToken cancellationToken = default)
     {
@@ -101,6 +98,14 @@ public sealed class Pm3SerialTransport : IAsyncDisposable
 
             if (response.Command == command)
                 return new Pm3NgExchange(request, response, debugFrames, unmatchedResponses);
+
+            if (command == CmdStatus && response.Command == CmdDownloadedBigBuf)
+            {
+                // Upstream PM3/PM5 hw status can emit 0x0208 before the final 0x0108.
+                // Keep it out of the generic unmatched-response storm budget.
+                unmatchedResponses.Add(response);
+                continue;
+            }
 
             unmatchedResponses.Add(response);
             if (unmatchedResponses.Count >= MaxUnmatchedResponses)
