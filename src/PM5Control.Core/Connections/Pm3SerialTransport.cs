@@ -39,9 +39,10 @@ public sealed class Pm3SerialTransport : IAsyncDisposable
     }
 
     /// <summary>
-    /// Sends one whitelisted command and waits for its matching response. PM3 firmware may send
-    /// CMD_DEBUG_PRINT_* frames before the command acknowledgement (notably for CMD_STATUS), so
-    /// those frames are retained in the exchange rather than being mistaken for a reply mismatch.
+    /// Sends one whitelisted command and returns the first complete response frame.
+    /// Known debug-print frames are retained separately. Unexpected command identifiers
+    /// are deliberately preserved as diagnostic responses instead of being discarded,
+    /// so protocol mismatches can be investigated from the exact raw frame.
     /// </summary>
     public async Task<Pm3NgExchange> SendReadOnlyAsync(ushort command, CancellationToken cancellationToken = default)
     {
@@ -67,14 +68,12 @@ public sealed class Pm3SerialTransport : IAsyncDisposable
             Buffer.BlockCopy(tail, 0, frame, header.Length, tail.Length);
             if (!Pm3NgFrame.TryDecodeResponse(frame, out var response) || response is null)
                 throw new InvalidDataException("PM3 endpoint returned an invalid NG response frame.");
-            if (response.Command == command)
-                return new Pm3NgExchange(response, debugFrames);
             if (Pm3CommandCode.IsDebugResponse(response.Command))
             {
                 debugFrames.Add(response);
                 continue;
             }
-            throw new InvalidDataException($"PM3 response command mismatch: expected 0x{command:X4}, got 0x{response.Command:X4}.");
+            return new Pm3NgExchange(response, debugFrames);
         }
     }
 
