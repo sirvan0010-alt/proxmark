@@ -243,10 +243,19 @@ internal sealed class Pm5ReadOnlyConsoleForm : Form
             Append($"TX frame:      {Convert.ToHexString(result.RequestFrame)}");
             var responseMatch = result.ResponseCommandMatches ? "MATCH" : $"MISMATCH expected 0x{result.ExpectedCommand:X4}, got 0x{result.ResponseCommand:X4}";
             Append($"RESPONSE: {(result.Success ? "OK" : "REJECTED")}, {responseMatch}, status={result.Status}, reason={result.Reason}, payload={result.PayloadLength} bytes");
+            foreach (var frame in result.UnmatchedResponses)
+                Append($"RX unmatched:  cmd=0x{frame.Command:X4}, status={frame.Status}, reason={frame.Reason}, payload={frame.Payload.Length} bytes, raw={Convert.ToHexString(frame.RawFrame)}");
             Append($"RX response:   {Convert.ToHexString(result.RawResponseFrame)}");
             Append($"RX payload:    {Convert.ToHexString(result.Payload)}");
             foreach (var frame in result.DebugFrames) Append($"RX debug 0x{frame.Command:X4}: {Convert.ToHexString(frame.RawFrame)}");
+            Append($"Correlation: expected 0x{result.ExpectedCommand:X4}; matched response 0x{result.ResponseCommand:X4}; unmatched={result.UnmatchedResponses.Count}; debug={result.DebugFrames.Count}");
             Append("Safety: read-only whitelist enforced; no write/reset/flash command was authorized.");
+            Append(string.Empty);
+        }
+        catch (OperationCanceledException)
+        {
+            Append($"TIMEOUT: no matching response for CMD 0x{match.Command:X4} within the transaction timeout.");
+            Append("No firmware write, reset or flash operation was attempted.");
             Append(string.Empty);
         }
         catch (Exception ex)
