@@ -60,6 +60,7 @@ internal static class DeveloperUiPatcher
         dialog.Show(owner);
         dialog.Append($"Selected {port}");
         dialog.Append("Only whitelisted read-only commands will be sent.");
+        dialog.Append("Each command is a separate transaction; exact TX and RX frames are logged.");
 
         await using var transport = new Pm3SerialTransport(port);
         try
@@ -67,19 +68,22 @@ internal static class DeveloperUiPatcher
             await transport.ConnectAsync();
             foreach (var item in ProbeCommands)
             {
+                dialog.Append($"=== TRANSACTION {item.Name} (0x{item.Command:X4}) ===");
                 try
                 {
                     var result = await Pm3ReadOnlyInspector.QueryAsync(transport, item.Command, item.Name);
+                    dialog.Append($"  TX frame:      {Convert.ToHexString(result.RequestFrame)}");
                     var match = result.ResponseCommandMatches ? "MATCH" : $"MISMATCH expected 0x{result.ExpectedCommand:X4}, got 0x{result.ResponseCommand:X4}";
-                    dialog.Append($"{item.Name} (0x{item.Command:X4}): {(result.Success ? "OK" : "REJECTED")}, {match}, status={result.Status}, reason={result.Reason}, payload={result.PayloadLength} bytes");
-                    dialog.Append($"  response raw: {Convert.ToHexString(result.RawResponseFrame)}");
+                    dialog.Append($"  RESPONSE: {(result.Success ? "OK" : "REJECTED")}, {match}, status={result.Status}, reason={result.Reason}, payload={result.PayloadLength} bytes");
+                    dialog.Append($"  RX response:   {Convert.ToHexString(result.RawResponseFrame)}");
                     dialog.Append($"  payload:       {Convert.ToHexString(result.Payload)}");
+                    dialog.Append($"  debug frames:  {result.DebugFrames.Count}");
                     foreach (var frame in result.DebugFrames)
-                        dialog.Append($"  debug 0x{frame.Command:X4}: {Convert.ToHexString(frame.RawFrame)}");
+                        dialog.Append($"  RX debug 0x{frame.Command:X4}: {Convert.ToHexString(frame.RawFrame)}");
                 }
                 catch (Exception ex)
                 {
-                    dialog.Append($"{item.Name} (0x{item.Command:X4}): ERROR — {ex.Message}");
+                    dialog.Append($"  ERROR — {ex.Message}");
                 }
             }
             dialog.Append("Probe complete. No write, reset, flash or simulation command was sent.");
@@ -120,7 +124,7 @@ internal static class DeveloperUiPatcher
         {
             Text = "PM5 read-only command probe";
             StartPosition = FormStartPosition.CenterParent;
-            Size = new Size(900, 620);
+            Size = new Size(1100, 720);
             _log.Multiline = true;
             _log.ReadOnly = true;
             _log.ScrollBars = ScrollBars.Both;
