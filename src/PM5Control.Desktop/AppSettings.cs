@@ -2,16 +2,15 @@ using System.Text.Json;
 
 namespace PM5Control.Desktop;
 
-/// <summary>
-/// Small local settings store (per-Windows-user AppData), so the ESP32/BWM Wi-Fi
-/// endpoint the person types in Settings survives across app restarts.
-/// This file only stores connection *hints* the user typed - it never stores
-/// anything sent to or received from the device.
-/// </summary>
 internal sealed class AppSettings
 {
     public string EspIpAddress { get; set; } = "";
-    public int EspTcpPort { get; set; } = 7891; // default app_tcp_server.c DEFAULT_SERVER_PORT
+    public int EspTcpPort { get; set; } = 7891;
+
+    // Ten persistent user-defined read-only debug buttons.
+    public string[] CustomButtonNames { get; set; } = Enumerable.Range(1, 10).Select(i => $"Button {i}").ToArray();
+    public string[] CustomButtonCommands { get; set; } = new string[10];
+    public bool[] CustomButtonEnabled { get; set; } = Enumerable.Repeat(true, 10).ToArray();
 
     private static string FilePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -23,15 +22,15 @@ internal sealed class AppSettings
         {
             if (File.Exists(FilePath))
             {
-                var json = File.ReadAllText(FilePath);
-                var loaded = JsonSerializer.Deserialize<AppSettings>(json);
-                if (loaded is not null) return loaded;
+                var loaded = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath));
+                if (loaded is not null)
+                {
+                    loaded.NormalizeCustomButtons();
+                    return loaded;
+                }
             }
         }
-        catch
-        {
-            // Corrupt or unreadable settings file - fall back to defaults rather than crash.
-        }
+        catch { }
         return new AppSettings();
     }
 
@@ -39,13 +38,32 @@ internal sealed class AppSettings
     {
         try
         {
+            NormalizeCustomButtons();
             var dir = Path.GetDirectoryName(FilePath)!;
             Directory.CreateDirectory(dir);
             File.WriteAllText(FilePath, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
         }
-        catch
-        {
-            // Best-effort only; failing to persist settings should never crash the UI.
-        }
+        catch { }
+    }
+
+    private void NormalizeCustomButtons()
+    {
+        CustomButtonNames = Normalize(CustomButtonNames, i => $"Button {i + 1}");
+        CustomButtonCommands = Normalize(CustomButtonCommands, _ => "");
+        CustomButtonEnabled = Normalize(CustomButtonEnabled, _ => true);
+    }
+
+    private static string[] Normalize(string[]? source, Func<int, string> fallback)
+    {
+        var result = new string[10];
+        for (var i = 0; i < result.Length; i++) result[i] = source is { Length: > 0 } && i < source.Length && source[i] is not null ? source[i] : fallback(i);
+        return result;
+    }
+
+    private static bool[] Normalize(bool[]? source, Func<int, bool> fallback)
+    {
+        var result = new bool[10];
+        for (var i = 0; i < result.Length; i++) result[i] = source is { Length: > 0 } && i < source.Length ? source[i] : fallback(i);
+        return result;
     }
 }
