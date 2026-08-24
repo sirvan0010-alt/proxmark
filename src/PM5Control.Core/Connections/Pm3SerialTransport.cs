@@ -39,9 +39,11 @@ public sealed class Pm3SerialTransport : IAsyncDisposable
     }
 
     /// <summary>
-    /// Sends one whitelisted command. The exact TX frame and every RX response frame
-    /// belonging to the transaction are retained so command/response synchronization
-    /// can be diagnosed without guessing from decoded payloads.
+    /// Sends one whitelisted command and correlates the response by command ID.
+    /// Debug-print frames are retained separately. Non-debug responses for another
+    /// command are retained as unmatched frames and do not terminate the transaction.
+    /// This prevents a stale/queued response such as 0x0108 from being reported as
+    /// the response to a newly issued 0x0112 command.
     /// </summary>
     public async Task<Pm3NgExchange> SendReadOnlyAsync(ushort command, CancellationToken cancellationToken = default)
     {
@@ -55,6 +57,7 @@ public sealed class Pm3SerialTransport : IAsyncDisposable
         await port.BaseStream.FlushAsync(timeout.Token).ConfigureAwait(false);
 
         var debugFrames = new List<Pm3NgResponse>();
+        var unmatchedResponses = new List<Pm3NgResponse>();
         while (true)
         {
             var header = await ReadExactAsync(port.BaseStream, Pm3NgFrame.ResponseHeaderSize, timeout.Token).ConfigureAwait(false);
@@ -67,12 +70,17 @@ public sealed class Pm3SerialTransport : IAsyncDisposable
             Buffer.BlockCopy(tail, 0, frame, header.Length, tail.Length);
             if (!Pm3NgFrame.TryDecodeResponse(frame, out var response) || response is null)
                 throw new InvalidDataException("PM3 endpoint returned an invalid NG response frame.");
+
             if (Pm3CommandCode.IsDebugResponse(response.Command))
             {
                 debugFrames.Add(response);
                 continue;
             }
-            return new Pm3NgExchange(request, response, debugFrames);
+
+            if (response.Command == command)
+                return new Pm3NgExchange(request, response, debugFrames, unmatchedResponses);
+
+            unmatchedResponses.Add(response);
         }
     }
 
