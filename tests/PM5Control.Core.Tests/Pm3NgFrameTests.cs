@@ -6,29 +6,29 @@ namespace PM5Control.Core.Tests;
 public sealed class Pm3NgFrameTests
 {
     [Fact]
-    public void DecodeCapabilities_Version8DecodesPm5AndCompiledFeatures()
+    public void DecodeCapabilities_Version7DecodesRdv4AndCompiledFeatures()
     {
         var payload = new byte[13];
-        payload[0] = 8;
+        payload[0] = 7; // CAPABILITIES_VERSION per pm3_cmd.h
         payload[9] = 0x80; // LF
         payload[10] = 0b_0100_0001; // Hitag + ISO14443-A
         payload[11] = 0b_0000_1001; // ISO15693 + iCLASS
-        payload[12] = 0b_0001_0100; // FPGA flash + PM5
+        payload[12] = 0b_0000_0010; // is_rdv4 (bit 1)
 
         var report = Pm3ReadOnlyInspector.DecodeCapabilities(payload);
 
         Assert.True(report.IsKnownSchema);
-        Assert.True(report.IsPm5);
+        Assert.True(report.IsRdv4);
         Assert.Equal(new[] { "LF", "Hitag", "ISO14443-A", "ISO15693", "iCLASS" }, report.EnabledFeatures);
     }
 
     [Fact]
     public void DecodeCapabilities_UnknownSchemaDoesNotGuess()
     {
-        var report = Pm3ReadOnlyInspector.DecodeCapabilities(new byte[] { 7, 0, 0, 0 });
+        var report = Pm3ReadOnlyInspector.DecodeCapabilities(new byte[] { 9, 0, 0, 0 });
 
         Assert.False(report.IsKnownSchema);
-        Assert.Null(report.IsPm5);
+        Assert.False(report.IsRdv4);
         Assert.Empty(report.EnabledFeatures);
     }
 
