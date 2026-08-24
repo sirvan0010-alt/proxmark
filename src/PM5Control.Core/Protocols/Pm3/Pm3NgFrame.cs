@@ -3,7 +3,7 @@ using System.Buffers.Binary;
 namespace PM5Control.Core.Protocols.Pm3;
 
 public sealed record Pm3NgResponse(ushort Command, sbyte Status, sbyte Reason, byte[] Payload, byte[] RawFrame);
-public sealed record Pm3NgExchange(Pm3NgResponse Response, IReadOnlyList<Pm3NgResponse> DebugFrames);
+public sealed record Pm3NgExchange(byte[] RequestFrame, Pm3NgResponse Response, IReadOnlyList<Pm3NgResponse> DebugFrames);
 
 /// <summary>Minimal PM3 NG framing for the USB/CDC command channel.</summary>
 public static class Pm3NgFrame
@@ -21,7 +21,6 @@ public static class Pm3NgFrame
     {
         if (payload.Length > MaxPayload)
             throw new ArgumentOutOfRangeException(nameof(payload));
-
         var frame = new byte[CommandHeaderSize + payload.Length + PostambleSize];
         BinaryPrimitives.WriteUInt32LittleEndian(frame.AsSpan(0, 4), CommandMagic);
         BinaryPrimitives.WriteUInt16LittleEndian(frame.AsSpan(4, 2), (ushort)(payload.Length | 0x8000));
@@ -34,21 +33,13 @@ public static class Pm3NgFrame
     public static bool TryDecodeResponse(ReadOnlySpan<byte> frame, out Pm3NgResponse? response)
     {
         response = null;
-        if (frame.Length < ResponseHeaderSize + PostambleSize)
-            return false;
-        if (BinaryPrimitives.ReadUInt32LittleEndian(frame[..4]) != ResponseMagic)
-            return false;
-
+        if (frame.Length < ResponseHeaderSize + PostambleSize) return false;
+        if (BinaryPrimitives.ReadUInt32LittleEndian(frame[..4]) != ResponseMagic) return false;
         var length = BinaryPrimitives.ReadUInt16LittleEndian(frame.Slice(4, 2)) & 0x7FFF;
-        if (length > MaxPayload)
-            return false;
-
+        if (length > MaxPayload) return false;
         var expected = ResponseHeaderSize + length + PostambleSize;
-        if (frame.Length != expected)
-            return false;
-        if (BinaryPrimitives.ReadUInt16LittleEndian(frame.Slice(expected - 2, 2)) != ResponsePostambleMagic)
-            return false;
-
+        if (frame.Length != expected) return false;
+        if (BinaryPrimitives.ReadUInt16LittleEndian(frame.Slice(expected - 2, 2)) != ResponsePostambleMagic) return false;
         var command = BinaryPrimitives.ReadUInt16LittleEndian(frame.Slice(8, 2));
         var status = unchecked((sbyte)frame[6]);
         var reason = unchecked((sbyte)frame[7]);
@@ -60,14 +51,10 @@ public static class Pm3NgFrame
     public static bool TryGetResponseLength(ReadOnlySpan<byte> header, out int totalLength)
     {
         totalLength = 0;
-        if (header.Length < ResponseHeaderSize)
-            return false;
-        if (BinaryPrimitives.ReadUInt32LittleEndian(header[..4]) != ResponseMagic)
-            return false;
-
+        if (header.Length < ResponseHeaderSize) return false;
+        if (BinaryPrimitives.ReadUInt32LittleEndian(header[..4]) != ResponseMagic) return false;
         var length = BinaryPrimitives.ReadUInt16LittleEndian(header.Slice(4, 2)) & 0x7FFF;
-        if (length > MaxPayload)
-            return false;
+        if (length > MaxPayload) return false;
         totalLength = ResponseHeaderSize + length + PostambleSize;
         return true;
     }
