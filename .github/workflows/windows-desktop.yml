@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 env:
-  PM5_APP_VERSION: 0.4.1
+  PM5_APP_VERSION: 0.6.0
 
 jobs:
   build-desktop:
