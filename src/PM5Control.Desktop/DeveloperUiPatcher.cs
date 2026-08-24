@@ -14,7 +14,9 @@ internal static class DeveloperUiPatcher
 
     private static void ConfigureToolbar(Form form)
     {
-        var strip = form.Controls.OfType<TableLayoutPanel>().FirstOrDefault()?.Controls.OfType<ToolStrip>().FirstOrDefault();
+        var root = form.Controls.OfType<TableLayoutPanel>().FirstOrDefault();
+        if (root is null) return;
+        var strip = root.Controls.OfType<ToolStrip>().FirstOrDefault();
         if (strip is null || strip.Items.OfType<ToolStripButton>().Any(x => x.Text == "PM5> Console")) return;
 
         foreach (var item in strip.Items.OfType<ToolStripButton>().Where(x => x.Text.Equals("Developer mode", StringComparison.OrdinalIgnoreCase)).ToArray())
@@ -58,7 +60,8 @@ internal static class DeveloperUiPatcher
     {
         var names = strip.Items.OfType<ToolStripButton>()
             .Where(x => x.Text is not "Settings" and not "Probe read-only commands" and not "PM5> Console" and not "Refresh ports")
-            .Select(x => x.Text).ToArray();
+            .Select(x => x.Text ?? string.Empty)
+            .ToArray();
         var enabled = _enabledButtons.Count == 0 ? names : _enabledButtons;
         var commsMode = DescribeCommsMode();
         using var dialog = new DeveloperSettingsForm(_developerMode, names, enabled, ButtonCommandInfo, Settings.EspIpAddress, Settings.EspTcpPort, commsMode);
@@ -71,7 +74,7 @@ internal static class DeveloperUiPatcher
         foreach (var button in strip.Items.OfType<ToolStripButton>())
         {
             if (button.Text is "Settings" or "Probe read-only commands" or "PM5> Console" or "Refresh ports") continue;
-            button.Visible = !_developerMode || _enabledButtons.Contains(button.Text, StringComparer.OrdinalIgnoreCase);
+            button.Visible = !_developerMode || _enabledButtons.Contains(button.Text ?? string.Empty, StringComparer.OrdinalIgnoreCase);
         }
     }
 
@@ -116,6 +119,8 @@ internal static class DeveloperUiPatcher
                     dialog.Append($"  TX frame:      {Convert.ToHexString(result.RequestFrame)}");
                     var match = result.ResponseCommandMatches ? "MATCH" : $"MISMATCH expected 0x{result.ExpectedCommand:X4}, got 0x{result.ResponseCommand:X4}";
                     dialog.Append($"  RESPONSE: {(result.Success ? "OK" : "REJECTED")}, {match}, status={result.Status}, reason={result.Reason}, payload={result.PayloadLength} bytes");
+                    foreach (var frame in result.UnmatchedResponses)
+                        dialog.Append($"  RX unmatched:  cmd=0x{frame.Command:X4}, status={frame.Status}, reason={frame.Reason}, raw={Convert.ToHexString(frame.RawFrame)}");
                     dialog.Append($"  RX response:   {Convert.ToHexString(result.RawResponseFrame)}");
                     dialog.Append($"  payload:       {Convert.ToHexString(result.Payload)}");
                     dialog.Append($"  debug frames:  {result.DebugFrames.Count}");
