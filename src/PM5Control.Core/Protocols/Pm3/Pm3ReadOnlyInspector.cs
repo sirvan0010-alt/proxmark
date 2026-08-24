@@ -6,7 +6,17 @@ namespace PM5Control.Core.Protocols.Pm3;
 
 public sealed record Pm3ReadOnlyIdentity(string Hardware, string ArmFirmware, string FpgaFirmware, string Details);
 public sealed record Pm3CapabilitiesReport(int SchemaVersion, bool IsKnownSchema, bool? IsPm5, IReadOnlyList<string> EnabledFeatures, byte[] RawPayload);
-public sealed record Pm3RawDiagnostic(string CommandName, bool Success, sbyte Status, sbyte Reason, byte[] Payload, IReadOnlyList<Pm3NgResponse> DebugFrames)
+public sealed record Pm3RawDiagnostic(
+    string CommandName,
+    ushort ExpectedCommand,
+    ushort ResponseCommand,
+    bool ResponseCommandMatches,
+    bool Success,
+    sbyte Status,
+    sbyte Reason,
+    byte[] Payload,
+    byte[] RawResponseFrame,
+    IReadOnlyList<Pm3NgResponse> DebugFrames)
 {
     public int PayloadLength => Payload.Length;
 }
@@ -23,9 +33,20 @@ public static class Pm3ReadOnlyInspector
     {
         if (!Pm3CommandCode.IsSafeReadOnlyProbe(command))
             throw new ArgumentOutOfRangeException(nameof(command), $"Command 0x{command:X4} is not on the safe read-only probe whitelist.");
+
         var exchange = await transport.SendReadOnlyAsync(command, cancellationToken).ConfigureAwait(false);
         var response = exchange.Response;
-        return new Pm3RawDiagnostic(name, response.Status == 0, response.Status, response.Reason, response.Payload, exchange.DebugFrames);
+        return new Pm3RawDiagnostic(
+            name,
+            command,
+            response.Command,
+            response.Command == command,
+            response.Status == 0,
+            response.Status,
+            response.Reason,
+            response.Payload,
+            response.RawFrame,
+            exchange.DebugFrames);
     }
 
     public static async Task<Pm3ReadOnlyIdentity> QueryVersionAsync(Pm3SerialTransport transport, CancellationToken cancellationToken = default)
