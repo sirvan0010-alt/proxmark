@@ -9,18 +9,13 @@ internal static class DeveloperUiPatcher
     private static bool _developerMode;
     private static IReadOnlyList<string> _enabledButtons = Array.Empty<string>();
 
-    public static void Install(MainForm form)
-    {
-        form.Shown += (_, _) => ConfigureToolbar(form);
-    }
+    public static void Install(MainForm form) => ConfigureToolbar(form);
 
     private static void ConfigureToolbar(Form form)
     {
-        var strip = form.Controls.OfType<TableLayoutPanel>().FirstOrDefault()?
-            .Controls.OfType<ToolStrip>().FirstOrDefault();
-        if (strip is null) return;
+        var strip = form.Controls.OfType<TableLayoutPanel>().FirstOrDefault()?.Controls.OfType<ToolStrip>().FirstOrDefault();
+        if (strip is null || strip.Items.OfType<ToolStripButton>().Any(x => x.Text == "Probe read-only commands")) return;
 
-        // Remove the old inline Developer mode toggle. It belongs in Settings.
         foreach (var item in strip.Items.OfType<ToolStripButton>().Where(x => x.Text.Equals("Developer mode", StringComparison.OrdinalIgnoreCase)).ToArray())
             strip.Items.Remove(item);
 
@@ -38,14 +33,12 @@ internal static class DeveloperUiPatcher
     {
         var names = strip.Items.OfType<ToolStripButton>()
             .Where(x => x.Text is not "Settings" and not "Probe read-only commands" and not "Refresh ports")
-            .Select(x => x.Text)
-            .ToArray();
+            .Select(x => x.Text).ToArray();
         var enabled = _enabledButtons.Count == 0 ? names : _enabledButtons;
         using var dialog = new DeveloperSettingsForm(_developerMode, names, enabled);
         if (dialog.ShowDialog(owner) != DialogResult.OK) return;
         _developerMode = dialog.DeveloperMode;
         _enabledButtons = dialog.EnabledButtons();
-
         foreach (var button in strip.Items.OfType<ToolStripButton>())
         {
             if (button.Text is "Settings" or "Probe read-only commands" or "Refresh ports") continue;
