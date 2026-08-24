@@ -15,10 +15,14 @@ internal static class DeveloperUiPatcher
     private static void ConfigureToolbar(Form form)
     {
         var strip = form.Controls.OfType<TableLayoutPanel>().FirstOrDefault()?.Controls.OfType<ToolStrip>().FirstOrDefault();
-        if (strip is null || strip.Items.OfType<ToolStripButton>().Any(x => x.Text == "Probe read-only commands")) return;
+        if (strip is null || strip.Items.OfType<ToolStripButton>().Any(x => x.Text == "PM5> Console")) return;
 
         foreach (var item in strip.Items.OfType<ToolStripButton>().Where(x => x.Text.Equals("Developer mode", StringComparison.OrdinalIgnoreCase)).ToArray())
             strip.Items.Remove(item);
+
+        var console = new ToolStripButton("PM5> Console") { DisplayStyle = ToolStripItemDisplayStyle.Text };
+        console.Click += (_, _) => ShowConsole(form);
+        strip.Items.Insert(Math.Max(0, strip.Items.Count - 1), console);
 
         var probe = new ToolStripButton("Probe read-only commands") { DisplayStyle = ToolStripItemDisplayStyle.Text };
         probe.Click += async (_, _) => await RunProbeAsync(form);
@@ -38,15 +42,22 @@ internal static class DeveloperUiPatcher
         ["hw ping"] = "CMD_PING (0x0109)",
         ["hw capabilities"] = "CMD_CAPABILITIES (0x0112)",
         ["Full diagnostic (hw info)"] = "CMD_VERSION + CMD_CAPABILITIES + CMD_STATUS + CMD_PING",
-        ["Probe read-only commands"] = "9 commands: VERSION/STATUS/PING/CAPABILITIES/DBGMODE/FLASHMEM x3/LF_SAMPLING_CFG",
+        ["PM5> Console"] = "interactive UI over the same four-command read-only whitelist",
+        ["Probe read-only commands"] = "fixed read-only probe; exact TX/RX frames logged",
         ["help"] = "local only - lists this tool's own commands, does not query the device",
         ["Refresh ports"] = "local only - re-scans Windows COM ports",
     };
 
+    private static void ShowConsole(Form owner)
+    {
+        using var console = new Pm5ReadOnlyConsoleForm();
+        console.ShowDialog(owner);
+    }
+
     private static void ShowSettings(Form owner, ToolStrip strip)
     {
         var names = strip.Items.OfType<ToolStripButton>()
-            .Where(x => x.Text is not "Settings" and not "Probe read-only commands" and not "Refresh ports")
+            .Where(x => x.Text is not "Settings" and not "Probe read-only commands" and not "PM5> Console" and not "Refresh ports")
             .Select(x => x.Text).ToArray();
         var enabled = _enabledButtons.Count == 0 ? names : _enabledButtons;
         var commsMode = DescribeCommsMode();
@@ -59,15 +70,11 @@ internal static class DeveloperUiPatcher
         Settings.Save();
         foreach (var button in strip.Items.OfType<ToolStripButton>())
         {
-            if (button.Text is "Settings" or "Probe read-only commands" or "Refresh ports") continue;
+            if (button.Text is "Settings" or "Probe read-only commands" or "PM5> Console" or "Refresh ports") continue;
             button.Visible = !_developerMode || _enabledButtons.Contains(button.Text, StringComparer.OrdinalIgnoreCase);
         }
     }
 
-    /// <summary>
-    /// Reports what this build actually knows about the current transport - honestly.
-    /// No Wi-Fi/BLE probing exists yet; only the USB/COM3 detection already used elsewhere.
-    /// </summary>
     private static string DescribeCommsMode()
     {
         var ports = GetSerialPorts();
