@@ -3,7 +3,11 @@ using System.Buffers.Binary;
 namespace PM5Control.Core.Protocols.Pm3;
 
 public sealed record Pm3NgResponse(ushort Command, sbyte Status, sbyte Reason, byte[] Payload, byte[] RawFrame);
-public sealed record Pm3NgExchange(byte[] RequestFrame, Pm3NgResponse Response, IReadOnlyList<Pm3NgResponse> DebugFrames);
+public sealed record Pm3NgExchange(
+    byte[] RequestFrame,
+    Pm3NgResponse Response,
+    IReadOnlyList<Pm3NgResponse> DebugFrames,
+    IReadOnlyList<Pm3NgResponse> UnmatchedResponses);
 
 /// <summary>Minimal PM3 NG framing for the USB/CDC command channel.</summary>
 public static class Pm3NgFrame
