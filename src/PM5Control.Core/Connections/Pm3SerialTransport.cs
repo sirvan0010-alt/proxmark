@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO.Ports;
 using PM5Control.Core.Protocols.Pm3;
 
@@ -5,6 +6,8 @@ namespace PM5Control.Core.Connections;
 
 public sealed class Pm3SerialTransport : IAsyncDisposable
 {
+    private const int MaxUnmatchedResponses = 32;
+
     private readonly string _portName;
     private readonly int _baudRate;
     private readonly int _timeoutMs;
@@ -42,29 +45,44 @@ public sealed class Pm3SerialTransport : IAsyncDisposable
     /// Sends one whitelisted command and correlates the response by command ID.
     /// Debug-print frames are retained separately. Non-debug responses for another
     /// command are retained as unmatched frames and do not terminate the transaction.
-    /// This prevents a stale/queued response such as 0x0108 from being reported as
-    /// the response to a newly issued 0x0112 command.
+    /// The transaction has both a hard wall-clock deadline and a maximum unmatched
+    /// frame budget so a response storm can never trap the caller in an unbounded loop.
+    /// No command is retransmitted automatically.
     /// </summary>
     public async Task<Pm3NgExchange> SendReadOnlyAsync(ushort command, CancellationToken cancellationToken = default)
     {
         if (!IsConnected) throw new InvalidOperationException("PM3 serial transport is not connected.");
+
         var port = _port!;
         port.DiscardInBuffer();
         var request = Pm3NgFrame.EncodeCommand(command);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(_timeoutMs);
+
         await port.BaseStream.WriteAsync(request, timeout.Token).ConfigureAwait(false);
         await port.BaseStream.FlushAsync(timeout.Token).ConfigureAwait(false);
 
+        var deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * _timeoutMs / 1000;
         var debugFrames = new List<Pm3NgResponse>();
         var unmatchedResponses = new List<Pm3NgResponse>();
+
         while (true)
         {
-            var header = await ReadExactAsync(port.BaseStream, Pm3NgFrame.ResponseHeaderSize, timeout.Token).ConfigureAwait(false);
+            timeout.Token.ThrowIfCancellationRequested();
+
+            var remainingMs = GetRemainingMilliseconds(deadline);
+            if (remainingMs <= 0)
+                throw new TimeoutException($"PM3 transaction timed out waiting for CMD 0x{command:X4}; unmatched={unmatchedResponses.Count}, debug={debugFrames.Count}.");
+
+            var header = await ReadExactAsync(port.BaseStream, Pm3NgFrame.ResponseHeaderSize, timeout.Token, remainingMs).ConfigureAwait(false);
             if (!Pm3NgFrame.TryGetResponseLength(header, out var totalLength))
                 throw new InvalidDataException("PM3 endpoint did not return a valid NG response header.");
 
-            var tail = await ReadExactAsync(port.BaseStream, totalLength - header.Length, timeout.Token).ConfigureAwait(false);
+            remainingMs = GetRemainingMilliseconds(deadline);
+            if (remainingMs <= 0)
+                throw new TimeoutException($"PM3 transaction timed out while reading CMD 0x{command:X4}; unmatched={unmatchedResponses.Count}, debug={debugFrames.Count}.");
+
+            var tail = await ReadExactAsync(port.BaseStream, totalLength - header.Length, timeout.Token, remainingMs).ConfigureAwait(false);
             var frame = new byte[totalLength];
             Buffer.BlockCopy(header, 0, frame, 0, header.Length);
             Buffer.BlockCopy(tail, 0, frame, header.Length, tail.Length);
@@ -81,15 +99,28 @@ public sealed class Pm3SerialTransport : IAsyncDisposable
                 return new Pm3NgExchange(request, response, debugFrames, unmatchedResponses);
 
             unmatchedResponses.Add(response);
+            if (unmatchedResponses.Count >= MaxUnmatchedResponses)
+            {
+                throw new TimeoutException($"PM3 response storm detected while waiting for CMD 0x{command:X4}; received {unmatchedResponses.Count} unmatched frames, last=0x{response.Command:X4}.");
+            }
         }
     }
 
-    private async Task<byte[]> ReadExactAsync(Stream stream, int count, CancellationToken cancellationToken)
+    private static int GetRemainingMilliseconds(long deadline)
     {
+        var remainingTicks = deadline - Stopwatch.GetTimestamp();
+        if (remainingTicks <= 0) return 0;
+        var remainingMs = (long)Math.Ceiling(remainingTicks * 1000.0 / Stopwatch.Frequency);
+        return remainingMs > int.MaxValue ? int.MaxValue : (int)remainingMs;
+    }
+
+    private static async Task<byte[]> ReadExactAsync(Stream stream, int count, CancellationToken cancellationToken, int timeoutMs)
+    {
+        if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
         var buffer = new byte[count];
         var offset = 0;
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(_timeoutMs);
+        timeout.CancelAfter(timeoutMs);
         while (offset < count)
         {
             var read = await stream.ReadAsync(buffer.AsMemory(offset, count - offset), timeout.Token).ConfigureAwait(false);
