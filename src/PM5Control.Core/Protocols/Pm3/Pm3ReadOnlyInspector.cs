@@ -23,7 +23,8 @@ public sealed record Pm3RawDiagnostic(
     byte[] RequestFrame,
     byte[] Payload,
     byte[] RawResponseFrame,
-    IReadOnlyList<Pm3NgResponse> DebugFrames)
+    IReadOnlyList<Pm3NgResponse> DebugFrames,
+    IReadOnlyList<Pm3NgResponse> UnmatchedResponses)
 {
     public int PayloadLength => Payload.Length;
 }
@@ -54,7 +55,8 @@ public static class Pm3ReadOnlyInspector
             exchange.RequestFrame,
             response.Payload,
             response.RawFrame,
-            exchange.DebugFrames);
+            exchange.DebugFrames,
+            exchange.UnmatchedResponses);
     }
 
     public static async Task<Pm3ReadOnlyIdentity> QueryVersionAsync(Pm3SerialTransport transport, CancellationToken cancellationToken = default)
