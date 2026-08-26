@@ -1,10 +1,9 @@
-using System.Collections.Concurrent;
+using System.Buffers.Binary;
 using System.Diagnostics;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Devices.Enumeration;
 using Windows.Security.Cryptography;
-using Windows.Storage.Streams;
 using PM5Control.Core.Connections;
 using PM5Control.Core.Protocols.Pm3;
 
@@ -16,7 +15,7 @@ namespace PM5Control.Desktop;
 /// service 0xAE86 and data characteristic 0xAE88. The transport carries the
 /// normal PM3 NG byte stream unchanged; BLE is only the transport layer.
 /// </summary>
-internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport
+internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport, IPm3ReadOnlyTransport
 {
     public const ushort SppServiceUuid16 = 0xAE86;
     public const ushort SppCharacteristicUuid16 = 0xAE88;
@@ -36,10 +35,7 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport
     private readonly List<byte> _rxBuffer = new();
     private bool _notificationsEnabled;
 
-    public WindowsBleProxmarkTransport(ulong bluetoothAddress)
-    {
-        _bluetoothAddress = bluetoothAddress;
-    }
+    public WindowsBleProxmarkTransport(ulong bluetoothAddress) => _bluetoothAddress = bluetoothAddress;
 
     public string TransportName => "Bluetooth LE / PM5 BWM SPP";
     public bool IsConnected => _device is not null && _characteristic is not null && _notificationsEnabled;
@@ -47,10 +43,8 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport
 
     public static async Task<IReadOnlyList<BleDeviceCandidate>> DiscoverAsync(CancellationToken cancellationToken = default)
     {
-        var selector = BluetoothLEDevice.GetDeviceSelector();
-        var devices = await DeviceInformation.FindAllAsync(selector);
+        var devices = await DeviceInformation.FindAllAsync(BluetoothLEDevice.GetDeviceSelector());
         cancellationToken.ThrowIfCancellationRequested();
-
         var result = new List<BleDeviceCandidate>();
         foreach (var info in devices)
         {
@@ -61,36 +55,27 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport
                 if (device is null) continue;
                 var name = string.IsNullOrWhiteSpace(device.Name) ? info.Name : device.Name;
                 if (string.IsNullOrWhiteSpace(name)) continue;
+                if (!name.Contains("Proxmark", StringComparison.OrdinalIgnoreCase) && !name.Contains("PM5", StringComparison.OrdinalIgnoreCase)) continue;
                 result.Add(new BleDeviceCandidate(name, device.BluetoothAddress, info.Id));
             }
-            catch
-            {
-                // A stale Windows Bluetooth cache entry must not break discovery.
-            }
+            catch { }
         }
-
-        return result
-            .Where(x => x.Name.Contains("Proxmark", StringComparison.OrdinalIgnoreCase) ||
-                        x.Name.Contains("PM5", StringComparison.OrdinalIgnoreCase))
-            .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        return result.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
         if (IsConnected) return;
         cancellationToken.ThrowIfCancellationRequested();
-
         _device = await BluetoothLEDevice.FromBluetoothAddressAsync(_bluetoothAddress);
-        if (_device is null)
-            throw new InvalidOperationException($"Windows could not open BLE device 0x{_bluetoothAddress:X12}.");
+        if (_device is null) throw new InvalidOperationException($"Windows could not open BLE device 0x{_bluetoothAddress:X12}.");
 
-        var servicesResult = await _device.GetGattServicesForUuidAsync(SppServiceUuid, BluetoothCacheMode.Uncached);
-        if (servicesResult.Status != GattCommunicationStatus.Success || servicesResult.Services.Count == 0)
-            throw new InvalidOperationException($"PM5 BWM BLE SPP service 0x{SppServiceUuid16:X4} was not found; status={servicesResult.Status}.");
+        var services = await _device.GetGattServicesForUuidAsync(SppServiceUuid, BluetoothCacheMode.Uncached);
+        if (services.Status != GattCommunicationStatus.Success || services.Services.Count == 0)
+            throw new InvalidOperationException($"PM5 BWM BLE SPP service 0x{SppServiceUuid16:X4} was not found; status={services.Status}.");
 
         GattCharacteristic? characteristic = null;
-        foreach (var service in servicesResult.Services)
+        foreach (var service in services.Services)
         {
             var chars = await service.GetCharacteristicsForUuidAsync(SppCharacteristicUuid, BluetoothCacheMode.Uncached);
             if (chars.Status == GattCommunicationStatus.Success && chars.Characteristics.Count > 0)
@@ -98,25 +83,20 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport
                 characteristic = chars.Characteristics[0];
                 break;
             }
-            service.Dispose();
         }
-
         if (characteristic is null)
             throw new InvalidOperationException($"PM5 BWM BLE SPP characteristic 0x{SppCharacteristicUuid16:X4} was not found.");
-
         if (!characteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Notify))
             throw new InvalidOperationException("PM5 BWM BLE SPP characteristic does not advertise notifications.");
 
         characteristic.ValueChanged += OnValueChanged;
-        var status = await characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
-            GattClientCharacteristicConfigurationDescriptorValue.Notify);
+        var status = await characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify);
         if (status != GattCommunicationStatus.Success)
         {
             characteristic.ValueChanged -= OnValueChanged;
             characteristic.Dispose();
             throw new InvalidOperationException($"Could not enable PM5 BWM BLE notifications; status={status}.");
         }
-
         _characteristic = characteristic;
         _notificationsEnabled = true;
     }
@@ -131,34 +111,23 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport
         var deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * TimeoutMs / 1000;
         var debugFrames = new List<Pm3NgResponse>();
         var unmatched = new List<Pm3NgResponse>();
-
         await WriteChunkedAsync(request, cancellationToken).ConfigureAwait(false);
 
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var remaining = RemainingMilliseconds(deadline);
-            if (remaining <= 0)
-                throw new TimeoutException($"PM5 BLE transaction timed out waiting for CMD 0x{command:X4}; debug={debugFrames.Count}; unmatched={unmatched.Count}; TX={Convert.ToHexString(request)}");
-
+            if (remaining <= 0) throw new TimeoutException($"PM5 BLE transaction timed out waiting for CMD 0x{command:X4}; debug={debugFrames.Count}; unmatched={unmatched.Count}; TX={Convert.ToHexString(request)}");
             while (TryTakeFrame(out var response))
             {
                 if (response is null) continue;
-                if (Pm3CommandCode.IsDebugResponse(response.Command))
-                {
-                    debugFrames.Add(response);
-                    continue;
-                }
-                if (response.Command == command)
-                    return new Pm3NgExchange(request, response, debugFrames, unmatched);
-
+                if (Pm3CommandCode.IsDebugResponse(response.Command)) { debugFrames.Add(response); continue; }
+                if (response.Command == command) return new Pm3NgExchange(request, response, debugFrames, unmatched);
                 unmatched.Add(response);
-                if (command == Pm3CommandCode.Status && response.Command == 0x0208)
-                    continue;
+                if (command == Pm3CommandCode.Status && response.Command == 0x0208) continue;
                 if (unmatched.Count >= MaxUnmatchedResponses)
                     throw new TimeoutException($"PM5 BLE response storm while waiting for CMD 0x{command:X4}; last=0x{response.Command:X4}; RX={Convert.ToHexString(response.RawFrame)}");
             }
-
             using var waitCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             waitCts.CancelAfter(remaining);
             await _rxSignal.WaitAsync(waitCts.Token).ConfigureAwait(false);
@@ -167,9 +136,11 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport
 
     public async Task<byte[]> SendAsync(ReadOnlyMemory<byte> request, CancellationToken cancellationToken = default)
     {
-        if (!Pm3NgFrame.TryGetResponseLength(request.Span, out _))
-            throw new InvalidOperationException("Windows BLE transport expects a PM3 NG command frame; use SendReadOnlyAsync for the safe probe.");
-        throw new NotSupportedException("Generic SendAsync is intentionally disabled. Use the read-only PM3 inspector boundary.");
+        if (request.Length < Pm3NgFrame.CommandHeaderSize + Pm3NgFrame.PostambleSize)
+            throw new InvalidDataException("PM5 BLE transport received an undersized PM3 NG command frame.");
+        var command = BinaryPrimitives.ReadUInt16LittleEndian(request.Span.Slice(6, 2));
+        var exchange = await SendReadOnlyAsync(command, cancellationToken).ConfigureAwait(false);
+        return exchange.Response.RawFrame;
     }
 
     private async Task WriteChunkedAsync(byte[] data, CancellationToken cancellationToken)
@@ -177,17 +148,12 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport
         var characteristic = _characteristic ?? throw new InvalidOperationException("BLE characteristic is unavailable.");
         var chunkSize = characteristic.MaxWriteValueSize;
         if (chunkSize <= 0) chunkSize = 20;
-        // The upstream PM5 BLE transport sends ATT Write Commands with payload
-        // size MTU-3. Windows exposes the equivalent limit as MaxWriteValueSize.
         for (var offset = 0; offset < data.Length; offset += chunkSize)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var count = Math.Min(chunkSize, data.Length - offset);
-            var chunk = data.AsMemory(offset, count).ToArray();
-            var buffer = CryptographicBuffer.CreateFromByteArray(chunk);
-            var status = await characteristic.WriteValueAsync(buffer, GattWriteOption.WriteWithoutResponse);
-            if (status != GattCommunicationStatus.Success)
-                throw new IOException($"BLE write failed at offset {offset}/{data.Length}; status={status}.");
+            var status = await characteristic.WriteValueAsync(CryptographicBuffer.CreateFromByteArray(data.AsMemory(offset, count).ToArray()), GattWriteOption.WriteWithoutResponse);
+            if (status != GattCommunicationStatus.Success) throw new IOException($"BLE write failed at offset {offset}/{data.Length}; status={status}.");
         }
     }
 
@@ -206,19 +172,16 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport
         lock (_rxLock)
         {
             if (_rxBuffer.Count < Pm3NgFrame.ResponseHeaderSize) return false;
-            var header = CollectionsMarshal.AsSpan(_rxBuffer).Slice(0, Pm3NgFrame.ResponseHeaderSize);
+            var header = _rxBuffer.Take(Pm3NgFrame.ResponseHeaderSize).ToArray();
             if (!Pm3NgFrame.TryGetResponseLength(header, out var totalLength))
             {
-                // Preserve framing recovery rather than guessing a response.
                 _rxBuffer.RemoveAt(0);
                 return _rxBuffer.Count >= Pm3NgFrame.ResponseHeaderSize && TryTakeFrame(out response);
             }
             if (_rxBuffer.Count < totalLength) return false;
             var frame = _rxBuffer.Take(totalLength).ToArray();
             _rxBuffer.RemoveRange(0, totalLength);
-            if (!Pm3NgFrame.TryDecodeResponse(frame, out response))
-                return true;
-            return true;
+            return Pm3NgFrame.TryDecodeResponse(frame, out response);
         }
     }
 
@@ -229,8 +192,7 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport
         return (int)Math.Min(int.MaxValue, Math.Ceiling(ticks * 1000.0 / Stopwatch.Frequency));
     }
 
-    private static Guid BluetoothUuid(ushort uuid16) =>
-        new($"0000{uuid16:X4}-0000-1000-8000-00805F9B34FB");
+    private static Guid BluetoothUuid(ushort uuid16) => new($"0000{uuid16:X4}-0000-1000-8000-00805F9B34FB");
 
     public async Task DisconnectAsync(CancellationToken cancellationToken = default)
     {
