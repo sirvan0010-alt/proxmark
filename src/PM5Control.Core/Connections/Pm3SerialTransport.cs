@@ -4,7 +4,7 @@ using PM5Control.Core.Protocols.Pm3;
 
 namespace PM5Control.Core.Connections;
 
-public sealed class Pm3SerialTransport : IAsyncDisposable
+public sealed class Pm3SerialTransport : IAsyncDisposable, IPm3ReadOnlyTransport
 {
     private const int MaxUnmatchedResponses = 32;
     private const ushort CmdStatus = 0x0108;
@@ -43,13 +43,6 @@ public sealed class Pm3SerialTransport : IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Sends one whitelisted command and correlates the response by command ID.
-    /// Debug-print frames are retained separately. For CMD_STATUS, the PM3 firmware
-    /// may emit CMD_DOWNLOADED_BIGBUF (0x0208) as an auxiliary response before the
-    /// final CMD_STATUS response. That frame is therefore ignored for correlation,
-    /// but the hard transaction deadline remains in force.
-    /// </summary>
     public async Task<Pm3NgExchange> SendReadOnlyAsync(ushort command, CancellationToken cancellationToken = default)
     {
         if (!IsConnected) throw new InvalidOperationException("PM3 serial transport is not connected.");
@@ -70,7 +63,6 @@ public sealed class Pm3SerialTransport : IAsyncDisposable
         while (true)
         {
             timeout.Token.ThrowIfCancellationRequested();
-
             var remainingMs = GetRemainingMilliseconds(deadline);
             if (remainingMs <= 0)
                 throw new TimeoutException($"PM3 transaction timed out waiting for CMD 0x{command:X4}; unmatched={unmatchedResponses.Count}, debug={debugFrames.Count}; TX={Hex(request)}");
@@ -101,20 +93,13 @@ public sealed class Pm3SerialTransport : IAsyncDisposable
 
             if (command == CmdStatus && response.Command == CmdDownloadedBigBuf)
             {
-                // Upstream PM3/PM5 hw status can emit 0x0208 before the final 0x0108.
-                // Keep it out of the generic unmatched-response storm budget.
                 unmatchedResponses.Add(response);
                 continue;
             }
 
             unmatchedResponses.Add(response);
             if (unmatchedResponses.Count >= MaxUnmatchedResponses)
-            {
-                throw new TimeoutException(
-                    $"PM3 response storm detected while waiting for CMD 0x{command:X4}; " +
-                    $"received {unmatchedResponses.Count} unmatched frames, last=0x{response.Command:X4}; " +
-                    $"TX={Hex(request)}; RX_LAST={Hex(response.RawFrame)}");
-            }
+                throw new TimeoutException($"PM3 response storm detected while waiting for CMD 0x{command:X4}; received {unmatchedResponses.Count} unmatched frames, last=0x{response.Command:X4}; TX={Hex(request)}; RX_LAST={Hex(response.RawFrame)}");
         }
     }
 
