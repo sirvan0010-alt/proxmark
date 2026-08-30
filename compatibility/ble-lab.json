@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "feature_family": "BLE_LAB",
+  "status": "PLANNED",
+  "reference": {
+    "name": "SmartLockPicking BLE HackMe",
+    "url": "https://smartlockpicking.com/ble_hackme/",
+    "role": "authorized BLE security-training reference"
+  },
+  "transport_reference": {
+    "name": "NielDK PM5 BLE bridge",
+    "url": "https://github.com/nieldk/proxmark3/blob/BLE-test/client/pm5_ble_bridge.py",
+    "role": "cross-platform BLE-to-byte-stream transport reference"
+  },
+  "safe_features": [
+    "BLE adapter discovery",
+    "advertisement inspection",
+    "service discovery",
+    "GATT characteristic inventory",
+    "read characteristic where permitted",
+    "connection diagnostics",
+    "offline simulated BLE device",
+    "authorized lab-device test profiles"
+  ],
+  "security_boundary": [
+    "No credential theft",
+    "No unauthorized pairing bypass",
+    "No replay/relay automation against third-party locks",
+    "No destructive BLE writes by default",
+    "Active security testing only for owned/authorized lab targets"
+  ],
+  "architecture": {
+    "host": "Windows/Linux/macOS native BLE stack",
+    "library_reference": "Bleak",
+    "pm5_boundary": "plain PM5 byte stream",
+    "wsl2": "optional TCP relay only; BLE remains on host OS"
+  }
+}
