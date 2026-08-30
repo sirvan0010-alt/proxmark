@@ -10,6 +10,7 @@ namespace PM5Control.Core.Protocols.Bwm;
 public enum BwmHardwareFeature
 {
     ChargerAndFuelGauge,
+    ConfigurableChargeVoltage,
     RgbPowerBatteryIndicator,
     Buzzer,
     WifiForwarding,
@@ -31,6 +32,7 @@ public static class BwmHardwareFeatureCatalog
         new HashSet<BwmHardwareFeature>
         {
             BwmHardwareFeature.ChargerAndFuelGauge,
+            BwmHardwareFeature.ConfigurableChargeVoltage,
             BwmHardwareFeature.RgbPowerBatteryIndicator,
             BwmHardwareFeature.Buzzer,
             BwmHardwareFeature.WifiForwarding,
@@ -43,10 +45,21 @@ public static class BwmHardwareFeatureCatalog
 
     /// <summary>
     /// Upstream PM5 charger/fuel-gauge components identified by NielDK's
-    /// 2026-08-28 firmware changes.
+    /// 2026-08-28/30 firmware changes.
     /// </summary>
     public const string ChargerController = "AW32001";
     public const string FuelGauge = "BQ27427";
+
+    /// <summary>
+    /// Firmware safety target introduced upstream by PR #3552.
+    /// The requested 4100 mV target snaps to 4095 mV because the AW32001E
+    /// regulates in 15 mV steps. Firmware reapplies the target at boot.
+    /// </summary>
+    public const ushort DefaultChargeVoltageTargetMv = 4100;
+    public const ushort EffectiveDefaultChargeVoltageMv = 4095;
+    public const ushort ChargeVoltageStepMv = 15;
+    public const ushort ChargeVoltageMinMv = 3600;
+    public const ushort ChargeVoltageMaxMv = 4200;
 
     /// <summary>
     /// Indicates that this catalog is source-derived and must not be treated
