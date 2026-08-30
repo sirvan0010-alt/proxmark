@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "lastChecked": "2026-08-31",
+  "component": "PM5 BWM / ESP32 subsystem",
+  "status": "REPORTED",
+  "batterySafety": {
+    "preferredChargeVoltageMv": 4100,
+    "previousDefaultObservedMv": 4200,
+    "confidence": "EXPECTED",
+    "source": "nieldk/proxmark3 PM5/BWM development discussion, 2026-08-30",
+    "note": "4.1 V is tracked as our preferred safer beta target. This compatibility record does not itself modify firmware or charger registers."
+  },
+  "lowBattery": {
+    "earlyWarning": {
+      "socPercentLte": 10,
+      "packVoltageMvLt": 3500,
+      "behavior": "warning beep when not on USB"
+    },
+    "shutdown": {
+      "packVoltageMvLte": 3300,
+      "socPercentLte": 3,
+      "behavior": "protected shutdown with debounce; not active while on USB"
+    },
+    "confidence": "REPORTED"
+  },
+  "telemetry": [
+    "battery voltage",
+    "battery state of charge",
+    "charge state",
+    "BWM Wi-Fi status",
+    "BWM firmware information"
+  ],
+  "integrationPolicy": "Control Center may display and validate these values when exposed by the device, but must not invent telemetry or write charger configuration without explicit verified protocol support."
+}
