@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "feature_family": "NFC",
+  "status": "PLANNED_READ_ONLY_FIRST",
+  "principle": "Reuse protocol concepts only when they can be mapped to verified PM5 capabilities; never claim libfreefare support merely because the protocol family overlaps.",
+  "reference": {
+    "repository": "nfc-tools/libfreefare",
+    "url": "https://github.com/nfc-tools/libfreefare",
+    "role": "protocol and API reference, not a direct source-code dependency"
+  },
+  "planned_capabilities": [
+    {"id":"iso14443-a-identify","mode":"read-only","status":"safe-to-plan"},
+    {"id":"iso14443-b-identify","mode":"read-only","status":"safe-to-plan"},
+    {"id":"mifare-classic-identify","mode":"read-only","status":"safe-to-plan"},
+    {"id":"mifare-ultralight-identify","mode":"read-only","status":"safe-to-plan"},
+    {"id":"ntag-identify","mode":"read-only","status":"safe-to-plan"},
+    {"id":"desfire-identify","mode":"read-only","status":"safe-to-plan"},
+    {"id":"felica-identify","mode":"read-only","status":"safe-to-plan"},
+    {"id":"tag-memory-map","mode":"read-only","status":"requires-verified-command-mapping"},
+    {"id":"tag-dump-export","mode":"read-only","status":"requires-verified-command-mapping"}
+  ],
+  "deferred": [
+    "generic tag writes",
+    "credential/key extraction",
+    "authentication bypass",
+    "attack automation",
+    "emulation/simulation against third-party systems"
+  ],
+  "licensing_rule": "Do not copy libfreefare source into this repository until its applicable license and dependency obligations are reviewed for the exact files being reused.",
+  "truth_rule": "A capability is DETECTED only after the PM5 reports or successfully completes the corresponding verified operation. Protocol-family similarity remains EXPECTED until tested."
+}
