@@ -19,6 +19,12 @@ public static class Pm3CommandCode
     public const ushort FlashMemGetInfo = 0x0148;      // CMD_FLASHMEM_GET_INFO (read-only query)
     public const ushort LfSamplingGetConfig = 0x0228; // CMD_LF_SAMPLING_GET_CONFIG
 
+    // PM5/BWM firmware command introduced upstream in RfidResearchGroup/proxmark3#3552.
+    // This is intentionally NOT part of the read-only allow-list: sending it changes
+    // the charger register. Upstream firmware defaults the target to 4100 mV, which
+    // the AW32001E's 15 mV hardware step applies as 4095 mV.
+    public const ushort Pm5BwmSetChargeVoltage = 0x017D; // CMD_PM5_BWM_SET_VCHG
+
     public static bool IsDebugResponse(ushort command) =>
         command is DebugPrintString or DebugPrintIntegers or DebugPrintBytes;
 
