@@ -4,24 +4,25 @@
 
 ## Scope
 
-The first implementation is passive analysis of Wi-Fi observations supplied by the host operating system or a future PM5/BWM telemetry adapter.
-
-It can identify:
+The beta is focused on passive observation, detection and controlled simulation:
 
 - duplicate SSIDs with different BSSIDs;
 - suspicious signal-strength differences;
 - duplicate SSIDs appearing on different channels;
 - security-mode inconsistencies;
 - candidate rogue-AP / Evil-Twin conditions;
-- evidence and confidence without claiming that a duplicate SSID is automatically malicious.
+- passive deauthentication/disruption detection;
+- BLE advertisement anomaly detection;
+- evidence and confidence without claiming that a duplicate SSID is automatically malicious;
+- deterministic simulator data for repeatable tests.
 
 The core analyzer is `PM5Control.Core.WirelessSecurityLab.RogueApAnalyzer`.
 
 ## Important boundary
 
-The project does **not** implement an operational Evil-Twin attack, client deauthentication, beacon flooding, credential harvesting, password verification, or forced client migration. Those mechanisms can disrupt third-party networks or capture credentials. They are intentionally outside the normal PM5 Control Center implementation boundary.
+The project does **not** implement an operational Evil-Twin attack, client deauthentication, beacon flooding, credential harvesting, password verification, forced client migration, or traffic interception. Those mechanisms can disrupt third-party networks or capture credentials and are intentionally outside the normal PM5 Control Center implementation boundary.
 
-A controlled laboratory can still use this module to analyze observations from an AP that the tester owns. A future simulator may generate synthetic duplicate-SSID observations so the detection logic can be tested without transmitting attack traffic.
+A controlled laboratory can still use this module to analyze observations from an AP that the tester owns. A future simulator may generate synthetic duplicate-SSID observations so detection logic can be tested without transmitting attack traffic.
 
 ## Why the stronger-signal scenario matters
 
@@ -38,12 +39,23 @@ Therefore the detector treats a stronger duplicate as **evidence**, not as proof
 5. Rogue-AP confidence scoring.
 6. Passive deauthentication/disruption detection.
 7. BLE advertisement anomaly detection.
-8. A simulator with deterministic synthetic RF observations.
-9. A GUI view under a dedicated **Wireless Security Lab** section.
+8. Deterministic wireless-security simulator.
+9. GUI view under a dedicated **Wireless Security Lab** section.
 10. Exportable evidence reports without storing credentials.
-
-All findings should retain the project's existing evidence labels (`DETECTED`, `REPORTED`, `EXPECTED`, `HYPOTHESIS`, `SIMULATED`, `UNKNOWN`) and should never turn a heuristic into a confirmed compromise without supporting evidence.
 
 ## External research references
 
-The architecture was informed by public ESP32 wireless-security projects demonstrating rogue-AP/Evil-Twin concepts and by defensive Wi-Fi security-lab projects. These references are research inputs only; their offensive packet-injection and credential-capture components are not imported into PM5 Control Center.
+Tracked in `docs/UPSTREAM_WATCHLIST.md`, including public ESP32 wireless-security projects, `nfc-tools/libfreefare`, and the BLE HackMe reference. These are research inputs only. Their offensive packet-injection and credential-capture components are not imported into PM5 Control Center.
+
+## Evidence model
+
+Every wireless observation should retain:
+
+- source/interface;
+- timestamp;
+- raw value where available;
+- interpreted value;
+- confidence;
+- `DETECTED`, `REPORTED`, `EXPECTED`, `HYPOTHESIS`, `SIMULATED` or `UNKNOWN`.
+
+A heuristic must never silently become a confirmed compromise.
