@@ -13,20 +13,18 @@ public abstract class CapabilityMatrixBase
     public bool IsPolicyDisabled(byte id) => GetCapability(id)?.Policy == PolicyStatus.Disabled;
     public bool IsNotSupported(byte id) => GetCapability(id)?.Support == SupportStatus.NotSupported;
 
+    /// <summary>Records raw test evidence only. Promotion to hardware-verified/contradicted is owned by the session gate.</summary>
     public void RecordTestResult(byte capId, CapabilityTestResult result, string sessionId, byte? errorCode = null,
         string? rawResponseHex = null, string? testCommandHex = null)
     {
         if (string.IsNullOrWhiteSpace(sessionId)) throw new ArgumentException("Session ID is required.", nameof(sessionId));
         if (!_capabilities.TryGetValue(capId, out var cap)) throw new ArgumentException($"Capability 0x{capId:X2} not registered", nameof(capId));
         cap.TestHistory.Add(new HardwareTestRecord { CapabilityId = capId, Result = result, SessionId = sessionId, ErrorCode = errorCode, Timestamp = DateTime.UtcNow, RawResponseHex = rawResponseHex, TestCommandHex = testCommandHex });
+
+        // A test result alone never grants hardware verification. The session gate must match it.
         if (cap.Policy == PolicyStatus.Disabled || cap.Support == SupportStatus.NotSupported) { cap.RecomputeExposure(); return; }
-        cap.Evidence = result switch
-        {
-            CapabilityTestResult.Pass => EvidenceLevel.HardwareVerified,
-            CapabilityTestResult.Fail => EvidenceLevel.HardwareContradicted,
-            CapabilityTestResult.Error or CapabilityTestResult.Timeout => EvidenceLevel.Tested,
-            _ => cap.Evidence
-        };
+        if (result is CapabilityTestResult.Pass or CapabilityTestResult.Fail or CapabilityTestResult.Error or CapabilityTestResult.Timeout)
+            cap.Evidence = EvidenceLevel.Tested;
         cap.RecomputeExposure();
     }
 
