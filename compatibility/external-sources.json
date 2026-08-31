@@ -1,91 +1,29 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "purpose": "Tracked external repositories, maintainers and reference sites for PM5 Control Center research and update audits.",
   "update_rule": "When the user requests an external update check, inspect every tracked source, compare current changes with this project, and implement only evidence-backed, license-compatible and project-relevant changes.",
   "sources": [
-    {
-      "id": "rrg-proxmark3",
-      "type": "repository",
-      "url": "https://github.com/RfidResearchGroup/proxmark3",
-      "owner": "RfidResearchGroup",
-      "priority": "primary-upstream-reference",
-      "scope": ["PM5", "BWM", "USB", "RF", "protocol", "timeout", "firmware", "documentation"]
-    },
-    {
-      "id": "nieldk-proxmark3",
-      "type": "repository",
-      "url": "https://github.com/nieldk/proxmark3",
-      "owner": "nieldk",
-      "priority": "primary-pm5-development-reference",
-      "scope": ["PM5", "BWM", "BLE", "battery", "charger", "USB", "timeouts", "host bridge"]
-    },
-    {
-      "id": "iceman1001",
-      "type": "maintainer",
-      "url": "https://github.com/iceman1001",
-      "owner": "iceman1001",
-      "priority": "maintainer-reference",
-      "scope": ["Proxmark ecosystem", "PM5 upstream direction", "PR activity"]
-    },
-    {
-      "id": "nfc-tools-libfreefare",
-      "type": "repository",
-      "url": "https://github.com/nfc-tools/libfreefare",
-      "owner": "nfc-tools",
-      "priority": "nfc-reference",
-      "scope": ["MIFARE", "DESFire", "Ultralight", "NTAG", "FeliCa", "NFC abstraction"]
-    },
-    {
-      "id": "smartlockpicking-ble-hackme",
-      "type": "reference-site",
-      "url": "https://smartlockpicking.com/ble_hackme/",
-      "owner": "SmartLockPicking",
-      "priority": "ble-lab-reference",
-      "scope": ["BLE", "GATT", "advertising", "security training", "lab simulation"]
-    },
-    {
-      "id": "nieldk-pm5-ble-bridge",
-      "type": "file-reference",
-      "url": "https://github.com/nieldk/proxmark3/blob/BLE-test/client/pm5_ble_bridge.py",
-      "owner": "nieldk",
-      "priority": "transport-reference",
-      "scope": ["BLE", "Bleak", "TCP relay", "WSL2", "cross-platform transport"]
-    },
-    {
-      "id": "pm5-rdv4-antenna-adapter",
-      "type": "repository",
-      "url": "https://github.com/nemanjan00/pm5-rdv4-antenna-adapter",
-      "owner": "nemanjan00",
-      "priority": "hardware-reference",
-      "scope": ["PM5", "antenna", "adapter", "hardware"]
-    }
+    {"id":"rrg-proxmark3","type":"repository","url":"https://github.com/RfidResearchGroup/proxmark3","owner":"RfidResearchGroup","priority":"primary-upstream-reference","scope":["PM5","BWM","USB","RF","protocol","timeout","firmware","documentation"]},
+    {"id":"nieldk-proxmark3","type":"repository","url":"https://github.com/nieldk/proxmark3","owner":"nieldk","priority":"primary-pm5-development-reference","scope":["PM5","BWM","BLE","battery","charger","USB","timeouts","host bridge"]},
+    {"id":"iceman1001","type":"maintainer","url":"https://github.com/iceman1001","owner":"iceman1001","priority":"maintainer-reference","scope":["Proxmark ecosystem","PM5 upstream direction","PR activity"]},
+    {"id":"nfc-tools-libfreefare","type":"repository","url":"https://github.com/nfc-tools/libfreefare","owner":"nfc-tools","priority":"nfc-reference","scope":["MIFARE","DESFire","Ultralight","NTAG","FeliCa","NFC abstraction"]},
+    {"id":"smartlockpicking-ble-hackme","type":"reference-site","url":"https://smartlockpicking.com/ble_hackme/","owner":"SmartLockPicking","priority":"ble-lab-reference","scope":["BLE","GATT","advertising","security training","lab simulation"]},
+    {"id":"nieldk-pm5-ble-bridge","type":"file-reference","url":"https://github.com/nieldk/proxmark3/blob/BLE-test/client/pm5_ble_bridge.py","owner":"nieldk","priority":"transport-reference","scope":["BLE","Bleak","TCP relay","WSL2","cross-platform transport"]},
+    {"id":"pm5-rdv4-antenna-adapter","type":"repository","url":"https://github.com/nemanjan00/pm5-rdv4-antenna-adapter","owner":"nemanjan00","priority":"hardware-reference","scope":["PM5","antenna","adapter","hardware"]},
+    {"id":"alexxdal-esp32wifiphisher","type":"repository","url":"https://github.com/Alexxdal/ESP32WifiPhisher","owner":"Alexxdal","priority":"wireless-research-reference","scope":["ESP32","Wi-Fi","phishing research","rogue AP"]},
+    {"id":"skepticseptic-esp32-evil-twin-deauther","type":"repository","url":"https://github.com/SkepticSeptic/ESP32-EvilTwin-Deauther","owner":"SkepticSeptic","priority":"wireless-research-reference","scope":["ESP32","Wi-Fi","evil twin","deauthentication research"]},
+    {"id":"aadesh0706-esp32-evil-twin","type":"repository","url":"https://github.com/aadesh0706/IOT-ESP32-Evil-Twin-WiFi-Hacking-Deauthentication-Captive-Portal","owner":"aadesh0706","priority":"wireless-research-reference","scope":["ESP32","Wi-Fi","captive portal","evil twin research"]},
+    {"id":"sameeralsahab-esp32-deauther","type":"repository","url":"https://github.com/SameerAlSahab/ESP32-Deauther","owner":"SameerAlSahab","priority":"wireless-research-reference","scope":["ESP32","Wi-Fi","deauthentication research"]},
+    {"id":"justcallmekoko-esp32marauder","type":"repository","url":"https://github.com/justcallmekoko/ESP32Marauder","owner":"justcallmekoko","priority":"wireless-research-reference","scope":["ESP32","Wi-Fi","Bluetooth","wireless lab"]},
+    {"id":"c5lab-projectzero","type":"repository","url":"https://github.com/C5Lab/projectZero","owner":"C5Lab","priority":"wireless-research-reference","scope":["ESP32-C5","Wi-Fi","wireless research"]},
+    {"id":"mr-blonde-rogueap","type":"repository","url":"https://github.com/Mr-Blonde/RogueAP","owner":"Mr-Blonde","priority":"wireless-research-reference","scope":["ESP32","rogue AP","captive portal"]},
+    {"id":"arthurbogiano-roguesp32","type":"repository","url":"https://github.com/ArthurBogiano/RoguESP32","owner":"ArthurBogiano","priority":"wireless-research-reference","scope":["ESP32","rogue AP","captive portal"]}
   ],
-  "tracked_maintainers": ["iceman1001", "nieldk", "doegox", "dxl", "nemanjan00"],
-  "tracked_on": "2026-08-31",
-  "implementation_policy": {
-    "allow": [
-      "read-only diagnostics",
-      "protocol parsing",
-      "transport abstraction",
-      "offline simulation",
-      "user-owned/lab BLE testing",
-      "NFC tag identification and authorized read operations",
-      "compatibility metadata",
-      "tests and documentation"
-    ],
-    "require_review": [
-      "write operations",
-      "firmware changes",
-      "cryptographic key handling",
-      "RFID/NFC emulation",
-      "authentication attacks",
-      "BLE active security testing"
-    ],
-    "never_automatic": [
-      "firmware flashing",
-      "destructive tag writes",
-      "credential/key extraction from third-party systems",
-      "attacks against devices without authorization"
-    ]
+  "tracked_maintainers":["iceman1001","nieldk","doegox","dxl","nemanjan00"],
+  "tracked_on":"2026-08-31",
+  "implementation_policy":{
+    "allow":["read-only diagnostics","protocol parsing","transport abstraction","offline simulation","user-owned/lab BLE testing","NFC tag identification and authorized read operations","compatibility metadata","tests and documentation","passive wireless observation and capability detection"],
+    "require_review":["write operations","firmware changes","cryptographic key handling","RFID/NFC emulation","authentication attacks","BLE active security testing","active Wi-Fi security testing"],
+    "never_automatic":["firmware flashing","destructive tag writes","credential/key extraction from third-party systems","credential phishing/capture","deauthentication or disruption against third-party clients","attacks against devices without authorization"]
   }
 }
