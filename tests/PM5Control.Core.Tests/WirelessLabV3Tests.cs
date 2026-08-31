@@ -15,7 +15,7 @@ public sealed class WirelessLabV3Tests
         matrix.RecordTestResult(WiFiCapabilityIds.Band5, CapabilityTestResult.Pass, "s");
         var cap = matrix.GetCapability(WiFiCapabilityIds.Band5)!;
         Assert.Equal(SupportStatus.NotSupported, cap.Support);
-        Assert.NotEqual(EvidenceLevel.HardwareVerified, cap.Evidence);
+        Assert.Equal(EvidenceLevel.Documented, cap.Evidence);
         Assert.Equal(UIExposure.Hidden, cap.Exposure);
     }
 
@@ -28,16 +28,17 @@ public sealed class WirelessLabV3Tests
         Assert.Equal(PolicyStatus.Disabled, cap.Policy);
         Assert.Equal(CapabilityTestResult.Pass, cap.LastTestResult);
         Assert.NotEqual(EvidenceLevel.HardwareVerified, cap.Evidence);
+        Assert.Equal(UIExposure.Hidden, cap.Exposure);
     }
 
     [Fact]
-    public void VerifiedBecomesVisible()
+    public void TestResultAloneCannotExposeCapability()
     {
         var matrix = new WiFiCapabilityMatrix();
-        matrix.RecordTestResult(WiFiCapabilityIds.BeaconTx, CapabilityTestResult.Pass, "s");
+        matrix.RecordTestResult(WiFiCapabilityIds.BeaconTx, CapabilityTestResult.Pass, "unbound");
         var cap = matrix.GetCapability(WiFiCapabilityIds.BeaconTx)!;
-        Assert.Equal(EvidenceLevel.HardwareVerified, cap.Evidence);
-        Assert.Equal(UIExposure.Visible, cap.Exposure);
+        Assert.Equal(EvidenceLevel.Tested, cap.Evidence);
+        Assert.Equal(UIExposure.Hidden, cap.Exposure);
     }
 
     [Fact]
@@ -51,6 +52,7 @@ public sealed class WirelessLabV3Tests
         var validation = result.Validations.Single(v => v.CapabilityId == WiFiCapabilityIds.Scan);
         Assert.True(validation.EvidenceMatchedSession);
         Assert.Equal(EvidenceLevel.HardwareVerified, validation.NewEvidence);
+        Assert.True(matrix.IsHardwareVerified(WiFiCapabilityIds.Scan));
     }
 
     [Fact]
@@ -63,6 +65,7 @@ public sealed class WirelessLabV3Tests
         var result = validator.CompleteSession(matrix, session.SessionId, matrix.ModuleName);
         var validation = result.Validations.Single(v => v.CapabilityId == WiFiCapabilityIds.Scan);
         Assert.False(validation.EvidenceMatchedSession);
+        Assert.Equal(EvidenceLevel.Tested, matrix.GetCapability(WiFiCapabilityIds.Scan)!.Evidence);
     }
 
     [Fact]
