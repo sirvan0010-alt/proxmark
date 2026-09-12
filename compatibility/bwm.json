@@ -1,8 +1,8 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "lastChecked": "2026-09-13",
   "component": "PM5 BWM / ESP32 subsystem",
-  "status": "REPORTED",
+  "status": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
   "upstream": {
     "repository": "RfidResearchGroup/Proxmark5_BWM_esp32",
     "branch": "master",
@@ -14,48 +14,28 @@
   "deviceModel": {
     "value": "0xDA10",
     "platform": "ESP32-C2 / ESP8684",
-    "confidence": "REPORTED",
+    "confidence": "SOURCE_REPORTED",
     "source": "RfidResearchGroup/Proxmark5_BWM_esp32 DEV.md"
   },
   "transport": {
     "uartBaud": 460800,
-    "confidence": "REPORTED",
+    "confidence": "SOURCE_REPORTED",
     "source": "RfidResearchGroup/Proxmark5_BWM_esp32 DEV.md"
   },
   "capabilities": {
-    "ble": "KNOWN_NOT_HARDWARE_VERIFIED",
-    "wifi": "KNOWN_NOT_HARDWARE_VERIFIED",
-    "wifiScanner": "KNOWN_NOT_HARDWARE_VERIFIED",
-    "tcpUdpMqttForwarding": "KNOWN_NOT_HARDWARE_VERIFIED",
-    "ota": "KNOWN_NOT_HARDWARE_VERIFIED",
+    "ble": "SOURCE_DOCUMENTED_NOT_HARDWARE_VERIFIED",
+    "wifi": "SOURCE_DOCUMENTED_NOT_HARDWARE_VERIFIED",
+    "wifiScanner": "SOURCE_DOCUMENTED_NOT_HARDWARE_VERIFIED",
+    "tcpUdpMqttForwarding": "SOURCE_DOCUMENTED_NOT_HARDWARE_VERIFIED",
+    "ota": "SOURCE_DOCUMENTED_NOT_HARDWARE_VERIFIED",
+    "batteryFuelGauge": "SOURCE_HARDWARE_DESIGN_NOT_HARDWARE_VERIFIED",
     "batteryTelemetry": "UNKNOWN_UNTIL_EXPOSED_BY_CONNECTED_FIRMWARE"
   },
-  "batterySafety": {
-    "preferredChargeVoltageMv": 4100,
-    "previousDefaultObservedMv": 4200,
-    "confidence": "EXPECTED",
-    "source": "nieldk/proxmark3 PM5/BWM development discussion, 2026-08-30",
-    "note": "4.1 V is tracked as our preferred safer beta target. This compatibility record does not itself modify firmware or charger registers."
+  "chargerPolicy": {
+    "automaticConfiguration": "DISABLED",
+    "reason": "No verified PM5+BWM charger-register write/readback path has been established on physical hardware.",
+    "note": "The Control Center must not silently apply a guessed charge-voltage target. Battery chemistry and production charge limits remain hardware/pack specific."
   },
-  "lowBattery": {
-    "earlyWarning": {
-      "socPercentLte": 10,
-      "packVoltageMvLt": 3500,
-      "behavior": "warning beep when not on USB"
-    },
-    "shutdown": {
-      "packVoltageMvLte": 3300,
-      "socPercentLte": 3,
-      "behavior": "protected shutdown with debounce; not active while on USB"
-    },
-    "confidence": "REPORTED"
-  },
-  "telemetry": [
-    "battery voltage",
-    "battery state of charge",
-    "charge state",
-    "BWM Wi-Fi status",
-    "BWM firmware information"
-  ],
-  "integrationPolicy": "Control Center may display and validate these values when exposed by the device, but must not invent telemetry or write charger configuration without explicit verified protocol support."
+  "evidenceRule": "Upstream source and CI evidence must never be promoted to HARDWARE_VERIFIED without reproducible observation on a physical PM5+BWM unit.",
+  "integrationPolicy": "Control Center may display source-backed capabilities and verified device telemetry separately, but must not invent telemetry or perform unverified charger configuration."
 }
