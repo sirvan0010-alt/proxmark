@@ -5,33 +5,17 @@ namespace PM5Control.Core.Tests;
 public sealed class BatteryChargeSafetyProfileTests
 {
     [Fact]
-    public void PreferredTargetIs4100mV()
+    public void AutomaticChargerConfigurationIsDisabledUntilHardwareEvidenceExists()
     {
-        Assert.Equal(4100, BatteryChargeSafetyProfile.PreferredChargeVoltageMv);
-    }
-
-    [Theory]
-    [InlineData(3600)]
-    [InlineData(4000)]
-    [InlineData(4100)]
-    public void AutomaticTargetAcceptsValuesUpToSafetyCeiling(int millivolts)
-    {
-        Assert.True(BatteryChargeSafetyProfile.IsAllowedAutomaticTarget(millivolts));
-    }
-
-    [Theory]
-    [InlineData(3500)]
-    [InlineData(4101)]
-    [InlineData(4200)]
-    public void AutomaticTargetRejectsValuesOutsidePolicy(int millivolts)
-    {
-        Assert.False(BatteryChargeSafetyProfile.IsAllowedAutomaticTarget(millivolts));
+        Assert.False(BatteryChargeSafetyProfile.AutomaticConfigurationEnabled);
+        Assert.False(BatteryChargeSafetyProfile.IsAllowedAutomaticTarget(4100));
+        Assert.False(BatteryChargeSafetyProfile.IsAllowedAutomaticTarget(4200));
     }
 
     [Fact]
-    public void ReadbackControlsHardwareEvidenceState()
+    public void RegisterReadbackIsRequiredForHardwareVerifiedState()
     {
-        Assert.Equal("EXPECTED", BatteryChargeSafetyProfile.GetEvidenceState(false));
+        Assert.Equal("UNKNOWN", BatteryChargeSafetyProfile.GetEvidenceState(false));
         Assert.Equal("HARDWARE_VERIFIED", BatteryChargeSafetyProfile.GetEvidenceState(true));
     }
 }
