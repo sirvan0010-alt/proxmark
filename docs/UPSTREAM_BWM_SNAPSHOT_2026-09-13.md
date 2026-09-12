@@ -16,7 +16,7 @@ This snapshot records the upstream state used by PM5 Control Center for the Prox
 
 ## DEV.md evidence
 
-The upstream `DEV.md` identifies the module as ESP32-C2 / ESP8684, device model `0xDA10`, with 2.4 GHz Wi-Fi and Bluetooth 5.0 LE. It documents a default UART of 460800 baud and a binary command/response/broadcast protocol with CRC16-CCITT. fileciteturn25file0L2-L2
+The upstream `DEV.md` identifies the module as ESP32-C2 / ESP8684, device model `0xDA10`, with 2.4 GHz Wi-Fi and Bluetooth 5.0 LE. It documents a default UART of 460800 baud and a binary command/response/broadcast protocol with CRC16-CCITT.
 
 The documented architecture includes BLE SPP passthrough, Wi-Fi scanner, TCP/UDP/MQTT forwarding, SNTP and OTA functionality. These are firmware/source capabilities documented upstream; they are not claims that a physical PM5+BWM connected to this application has been verified.
 
@@ -30,7 +30,7 @@ CI success proves that the upstream firmware is currently buildable in the publi
 
 ## Protocol relationship to Control Center
 
-The repository already records verified BWM protocol provenance in `docs/BWM_PROTOCOL.md`, tied to upstream commit `b918166128e05455c2dcb4e232216d453bbf29ee`. That document establishes source-level evidence for frame format, CRC scope, command provenance and read-only adapter requirements. fileciteturn29file0L2-L2
+The repository already records verified BWM protocol provenance in `docs/BWM_PROTOCOL.md`, tied to upstream commit `b918166128e05455c2dcb4e232216d453bbf29ee`. That document establishes source-level evidence for frame format, CRC scope, command provenance and read-only adapter requirements.
 
 The new upstream snapshot must therefore be treated as a **new firmware/capability baseline**, not as a replacement for the protocol provenance record.
 
