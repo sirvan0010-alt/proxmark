@@ -251,6 +251,8 @@ The RfidResearchGroup Proxmark3 repository is an upstream reference and an impor
 
 Because upstream changes frequently, compatibility claims should record repository, branch/tag, exact commit when possible, date checked and relevant files/components.
 
+For the BWM/ESP32 subsystem, the latest inspected upstream baseline is recorded in `docs/UPSTREAM_BWM_SNAPSHOT_2026-09-13.md`. It records the exact upstream commit, DEV.md capability baseline and CI result separately from physical hardware verification.
+
 ## Current status
 
 **Stage: Windows PM5 Inspector shell added / real-hardware protocol validation pending.**
