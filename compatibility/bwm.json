@@ -1,8 +1,35 @@
 {
-  "schemaVersion": 1,
-  "lastChecked": "2026-08-31",
+  "schemaVersion": 2,
+  "lastChecked": "2026-09-13",
   "component": "PM5 BWM / ESP32 subsystem",
   "status": "REPORTED",
+  "upstream": {
+    "repository": "RfidResearchGroup/Proxmark5_BWM_esp32",
+    "branch": "master",
+    "commit": "e0c4982800eb7d1ca16045631f3460f9f176427c",
+    "researchDate": "2026-09-13",
+    "ciStatus": "SUCCESS",
+    "ciMeaning": "Upstream firmware build/package workflow completed successfully; this is not physical hardware verification."
+  },
+  "deviceModel": {
+    "value": "0xDA10",
+    "platform": "ESP32-C2 / ESP8684",
+    "confidence": "REPORTED",
+    "source": "RfidResearchGroup/Proxmark5_BWM_esp32 DEV.md"
+  },
+  "transport": {
+    "uartBaud": 460800,
+    "confidence": "REPORTED",
+    "source": "RfidResearchGroup/Proxmark5_BWM_esp32 DEV.md"
+  },
+  "capabilities": {
+    "ble": "KNOWN_NOT_HARDWARE_VERIFIED",
+    "wifi": "KNOWN_NOT_HARDWARE_VERIFIED",
+    "wifiScanner": "KNOWN_NOT_HARDWARE_VERIFIED",
+    "tcpUdpMqttForwarding": "KNOWN_NOT_HARDWARE_VERIFIED",
+    "ota": "KNOWN_NOT_HARDWARE_VERIFIED",
+    "batteryTelemetry": "UNKNOWN_UNTIL_EXPOSED_BY_CONNECTED_FIRMWARE"
+  },
   "batterySafety": {
     "preferredChargeVoltageMv": 4100,
     "previousDefaultObservedMv": 4200,
