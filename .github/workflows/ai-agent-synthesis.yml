@@ -227,6 +227,46 @@ jobs:
             echo 'No .NET solution/project discovered; Python swarm smoke checks completed.'
           fi
 
+      - name: Build adversarial review input
+        run: |
+          set -euo pipefail
+          git diff --cached --no-ext-diff > implementation-staged.diff
+          {
+            echo '# Final synthesis'
+            cat synthesis/synthesis-decision.json
+            echo
+            echo '# Actual staged implementation diff'
+            cat implementation-staged.diff
+          } > implementation-review-context.md
+
+      - name: Run adversarial Review Agent
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "${OPENAI_API_KEY:-}" || { echo 'OPENAI_API_KEY secret is not configured; review cannot call the model.' >&2; exit 1; }
+          python3 tools/ai-swarm/implementation_review_runner.py synthesis/synthesis-decision.json implementation-staged.diff implementation-review.json
+
+      - name: Enforce adversarial review gate
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path('implementation-review.json').read_text())
+          print(json.dumps(d, ensure_ascii=False, indent=2))
+          if d.get('verdict') != 'APPROVE':
+              raise SystemExit('IMPLEMENTATION_REVIEW=BLOCKED: verdict='+str(d.get('verdict')))
+          PY
+
+      - name: Upload implementation review
+        if: ${{ always() && hashFiles('implementation-review.json') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pm5-ai-implementation-review
+          path: implementation-review.json
+          retention-days: 30
+
       - name: Commit implementation candidate
         id: commit
         run: |
