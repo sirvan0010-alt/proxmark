@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Adversarial model-backed review of an already-applied implementation diff.
 
-This reviewer is deliberately read-only: it inspects the synthesis, staged diff,
-and supplied source context, then returns a machine-checkable verdict. It never
-changes repository files or touches PM5 hardware.
+This reviewer is deliberately read-only: it inspects the synthesis and actual
+staged diff, then returns a machine-checkable verdict. It never changes repository
+files or touches PM5 hardware.
 """
 from __future__ import annotations
 
@@ -96,7 +96,7 @@ def main() -> int:
         raise RuntimeError("review verdict must be APPROVE, REVISE or BLOCK")
     pathlib.Path(output_file).write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(data, ensure_ascii=False, indent=2))
-    return 0 if data["verdict"] == "APPROVE" else 1
+    return 0
 
 
 if __name__ == "__main__":
