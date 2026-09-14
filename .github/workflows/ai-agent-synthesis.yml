@@ -6,8 +6,9 @@ on:
     types: [completed]
 
 permissions:
-  contents: read
+  contents: write
   actions: read
+  pull-requests: write
 
 concurrency:
   group: pm5-ai-synthesis-${{ github.event.workflow_run.id }}
@@ -53,21 +54,38 @@ jobs:
           5. Preserve read-only and destructive-operation gates.
           6. Insufficient evidence becomes a research, simulator or hardware-verification blocker.
 
-          Implementation may be recommended only when architecture, evidence,
-          security, test and review gates are satisfied. This synthesis step itself
-          must not modify repository files or operate hardware.
+          Implementation may be recommended only when architecture, evidence, security,
+          test and review gates are satisfied. This synthesis step itself must not modify
+          repository files or operate hardware.
 
-          Required output:
-          - FINAL DECISION
-          - ORIGINAL VS IMPROVED FUNCTION
-          - ACCEPTED FINDINGS
-          - REJECTED/REVISED FINDINGS WITH REASONS
-          - EVIDENCE STATE FOR EACH IMPORTANT CLAIM
-          - EXACT FILES THAT WOULD CHANGE
-          - TEST/CI GATES
-          - SECURITY/SAFETY GATES
-          - HARDWARE VERIFICATION REQUIRED?
-          - NEXT BLOCKER
+          IMPORTANT: Return ONLY valid JSON, with no Markdown fences and no prose outside JSON.
+          Use exactly these top-level fields:
+          {
+            "decision":"IMPLEMENT|BLOCK|RESEARCH|HARDWARE_VERIFY",
+            "original_function":"...",
+            "improved_function":"...",
+            "implementation_scope":["exact/path/or/directory"],
+            "approvals":{
+              "architecture":{"role":"ARCHITECT_AGENT","status":"APPROVE|BLOCK"},
+              "evidence":{"role":"EVIDENCE_AGENT","status":"APPROVE|BLOCK"},
+              "security":{"role":"SECURITY_AGENT","status":"APPROVE|BLOCK"},
+              "tests":{"role":"TEST_AGENT","status":"APPROVE|BLOCK"},
+              "review":{"role":"REVIEW_AGENT","status":"APPROVE|BLOCK"}
+            },
+            "evidence_state":"SOURCE|STATIC_ANALYSIS|UNIT_TESTED|CI_VERIFIED|PROTOCOL_VERIFIED|HOST_VERIFIED|REAL_HARDWARE_OBSERVED|HARDWARE_VERIFIED|AUTOMATED_IN_CLIENT|UNKNOWN|HYPOTHESIS|SIMULATED",
+            "requires_hardware_verification":true,
+            "destructive_operation":false,
+            "accepted_findings":["..."],
+            "rejected_findings":["..."],
+            "reasons":["..."],
+            "tests":["..."],
+            "security_constraints":["..."],
+            "next_blocker":"..."
+          }
+
+          Do not set IMPLEMENT unless every required approval has status APPROVE,
+          implementation is supported by the evidence, and no hardware verification
+          or destructive operation is still required.
           EOF
 
           {
@@ -93,9 +111,144 @@ jobs:
           test -n "${OPENAI_API_KEY:-}" || { echo 'OPENAI_API_KEY secret is not configured; synthesis cannot call the model.' >&2; exit 1; }
           python3 tools/ai-swarm/runner.py ORCHESTRATOR_SYNTHESIS synthesis-task.md synthesis-context.md synthesis-output.json
 
+      - name: Validate synthesis schema
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          outer=json.loads(Path('synthesis-output.json').read_text())
+          raw=outer.get('output', outer)
+          if isinstance(raw, str):
+              data=json.loads(raw)
+          else:
+              data=raw
+          Path('synthesis-decision.json').write_text(json.dumps(data, ensure_ascii=False, indent=2)+'\n')
+          required=['decision','implementation_scope','approvals','evidence_state','requires_hardware_verification','destructive_operation']
+          missing=[x for x in required if x not in data]
+          if missing: raise SystemExit('missing synthesis fields: '+', '.join(missing))
+          PY
+          python3 tools/ai-swarm/implementation_gate.py synthesis-decision.json
+
       - name: Upload synthesis decision
         uses: actions/upload-artifact@v4
         with:
           name: pm5-ai-synthesis-decision
-          path: synthesis-output.json
+          path: synthesis-decision.json
           retention-days: 30
+
+  controlled-implementation:
+    name: Controlled AI Implementation / Draft PR
+    needs: synthesis
+    if: ${{ needs.synthesis.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout triggering revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Download approved synthesis
+        uses: actions/download-artifact@v4
+        with:
+          name: pm5-ai-synthesis-decision
+          path: synthesis
+
+      - name: Verify implementation gate
+        run: python3 tools/ai-swarm/implementation_gate.py synthesis/synthesis-decision.json
+
+      - name: Build scoped source context
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, pathlib
+          d=json.loads(pathlib.Path('synthesis/synthesis-decision.json').read_text())
+          scope=d['implementation_scope']
+          files=[]
+          for item in scope:
+              p=pathlib.Path(item)
+              if p.is_file(): files.append(p)
+              elif p.is_dir(): files.extend(x for x in p.rglob('*') if x.is_file())
+          files=sorted(set(files))
+          out=[]
+          total=0
+          for p in files:
+              if p.parts and p.parts[0] in {'.git','.github'}:
+                  continue
+              try: text=p.read_text(encoding='utf-8')
+              except (UnicodeDecodeError,OSError): continue
+              if total+len(text)>160000: break
+              out.append(f'===== {p} =====\n{text}\n')
+              total+=len(text)
+          pathlib.Path('implementation-context.md').write_text('\n'.join(out), encoding='utf-8')
+          PY
+
+      - name: Ask implementation agent for patch
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "${OPENAI_API_KEY:-}" || { echo 'OPENAI_API_KEY secret is not configured; implementation cannot call the model.' >&2; exit 1; }
+          python3 tools/ai-swarm/implementation_runner.py synthesis/synthesis-decision.json implementation-context.md implementation.diff
+
+      - name: Apply and enforce scope
+        run: |
+          set -euo pipefail
+          git diff --exit-code
+          test -s implementation.diff || { echo 'Implementation agent returned an empty diff; nothing to implement.'; exit 0; }
+          git apply --check implementation.diff
+          git apply --index implementation.diff
+          git diff --check
+          python3 - <<'PY'
+          import json, pathlib, subprocess
+          d=json.loads(pathlib.Path('synthesis/synthesis-decision.json').read_text())
+          scope=[x.rstrip('/') for x in d['implementation_scope']]
+          changed=subprocess.check_output(['git','diff','--cached','--name-only'], text=True).splitlines()
+          def allowed(f):
+              return any(f==s or f.startswith(s+'/') for s in scope)
+          bad=[f for f in changed if not allowed(f)]
+          if bad:
+              raise SystemExit('SCOPE_VIOLATION: '+', '.join(bad))
+          if any(f.startswith('.github/') or f.startswith('.git/') for f in changed):
+              raise SystemExit('CONTROL_PATH_VIOLATION: workflow/git metadata changes are forbidden')
+          print('Scoped files:', ', '.join(changed) or '(none)')
+          PY
+
+      - name: Run repository smoke tests
+        run: |
+          set -euo pipefail
+          python3 -m compileall -q tools/ai-swarm
+          if find . -maxdepth 3 -name '*.sln' -o -name '*.slnx' | grep -q .; then
+            while IFS= read -r solution; do dotnet test "$solution" --no-restore || dotnet test "$solution"; done < <(find . -maxdepth 3 \( -name '*.sln' -o -name '*.slnx' \) -print)
+          elif find . -maxdepth 3 -name '*.csproj' | grep -q .; then
+            while IFS= read -r project; do dotnet test "$project"; done < <(find . -maxdepth 3 -name '*.csproj' -print)
+          else
+            echo 'No .NET solution/project discovered; Python swarm smoke checks completed.'
+          fi
+
+      - name: Commit implementation candidate
+        id: commit
+        run: |
+          set -euo pipefail
+          if git diff --cached --quiet; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          branch="ai/pm5-implementation-${{ github.event.workflow_run.id }}"
+          git switch -c "$branch"
+          git config user.name 'PM5 AI Implementation Agent'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'ai(pm5): controlled implementation candidate'
+          git push --set-upstream origin "$branch"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+      - name: Open draft pull request
+        if: ${{ steps.commit.outputs.changed == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr create --draft --base main --head "${{ steps.commit.outputs.branch }}" \
+            --title 'AI: PM5 controlled implementation candidate' \
+            --body-file synthesis/synthesis-decision.json
