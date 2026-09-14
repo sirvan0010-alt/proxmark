@@ -12,6 +12,11 @@ on:
         required: false
         default: 'auto'
         type: string
+      rounds:
+        description: 'Maximum deliberation rounds'
+        required: false
+        default: '2'
+        type: string
   issues:
     types: [opened, labeled]
 
@@ -19,9 +24,11 @@ permissions:
   contents: read
   issues: write
 
-# This workflow is the orchestration/task-factory layer. It creates deterministic
-# specialist handoffs; it does not pretend that a GitHub Action itself is an LLM.
-# A future AI runner can consume these artifacts and return proposed patches/reviews.
+# This workflow is the collaboration protocol and task-factory layer.
+# It does NOT pretend that shell jobs are LLMs. A real AI runner can consume
+# the contracts below and write substantive findings/reviews into the handoffs.
+# The protocol nevertheless defines the communication graph, challenge rounds,
+# conflict resolution and implementation gate used by the PM5 engineering swarm.
 
 jobs:
   orchestrator:
@@ -30,6 +37,7 @@ jobs:
     outputs:
       task_id: ${{ steps.task.outputs.task_id }}
       scope: ${{ steps.task.outputs.scope }}
+      rounds: ${{ steps.task.outputs.rounds }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,12 +47,15 @@ jobs:
         env:
           INPUT_TASK: ${{ inputs.task }}
           INPUT_SCOPE: ${{ inputs.scope }}
+          INPUT_ROUNDS: ${{ inputs.rounds }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
           set -euo pipefail
           TASK="${INPUT_TASK:-${ISSUE_TITLE:-PM5 engineering task}}"
           SCOPE="${INPUT_SCOPE:-auto}"
+          ROUNDS="${INPUT_ROUNDS:-2}"
+          case "$ROUNDS" in 1|2|3) ;; *) ROUNDS=2 ;; esac
           ID="PM5-$(date -u +%Y%m%d)-${GITHUB_RUN_ID}"
           mkdir -p swarm-tasks
           cat > "swarm-tasks/${ID}.md" <<EOF
@@ -53,12 +64,29 @@ jobs:
           - commit: ${GITHUB_SHA}
           - task: ${TASK}
           - scope: ${SCOPE}
-          - evidence rule: source/protocol/CI evidence must not be promoted to hardware verification
-          - required output: analysis, affected files, evidence references, tests, risks, next blocker
-          - hardware policy: no flashing, erasing, charger writes, FPGA power/configuration, or destructive action without explicit human confirmation and established evidence
+          - deliberation rounds: ${ROUNDS}
+
+          ## Collaboration contract
+          1. Orchestrator decomposes the request and selects specialists.
+          2. Specialists produce independent findings.
+          3. Domain agents challenge findings outside their authority.
+          4. Challenged agents must answer, revise, or reject the challenge with evidence.
+          5. Orchestrator resolves remaining conflicts; unresolved uncertainty becomes a blocker.
+          6. Implementation is allowed only after architecture, evidence, security and test gates agree.
+          7. A better function proposed by a specialist may replace the original request when evidence supports it.
+
+          ## Evidence rule
+          Source/protocol/CI evidence must not be promoted to hardware verification.
+
+          ## Hardware policy
+          No flashing, erasing, charger writes, FPGA power/configuration, or destructive action without explicit human confirmation and established evidence.
+
+          ## Required final output
+          decision, alternatives rejected, evidence ledger update, files to change, tests, security review, evidence state, next blocker.
           EOF
           echo "task_id=${ID}" >> "$GITHUB_OUTPUT"
           echo "scope=${SCOPE}" >> "$GITHUB_OUTPUT"
+          echo "rounds=${ROUNDS}" >> "$GITHUB_OUTPUT"
 
       - name: Upload orchestrator contract
         uses: actions/upload-artifact@v4
@@ -100,75 +128,163 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create specialist handoff
+      - name: Create specialist proposal contract
         env:
           AGENT: ${{ matrix.agent }}
           TASK_ID: ${{ needs.orchestrator.outputs.task_id }}
           SCOPE: ${{ needs.orchestrator.outputs.scope }}
         run: |
           set -euo pipefail
-          mkdir -p swarm-handoffs
-          cat > "swarm-handoffs/${AGENT}.md" <<EOF
-          # ${AGENT}
+          mkdir -p "swarm-round-1/${AGENT}"
+          cat > "swarm-round-1/${AGENT}/proposal.md" <<EOF
+          # ${AGENT} — proposal
           - task: ${TASK_ID}
           - repository: ${GITHUB_REPOSITORY}
           - commit: ${GITHUB_SHA}
           - scope: ${SCOPE}
 
-          ## Required method
-          Inspect the current repository and relevant upstream source before proposing changes. Preserve exact provenance. Do not infer physical PM5 behaviour from PM3 source, simulator code, source constants or CI.
+          ## Agent-to-agent contract
+          This proposal is a message to the swarm, not an isolated answer.
+
+          ## Required work
+          Inspect the current repository and relevant upstream source before proposing changes. Preserve exact provenance. State what is known, unknown and inferred.
 
           ## Required output
-          1. finding
-          2. evidence/source and exact commit where applicable
-          3. affected code/docs
-          4. recommendation
-          5. tests/verification
-          6. security/safety constraints
-          7. evidence state
-          8. next handoff or blocker
+          1. finding / proposed function
+          2. alternative or improvement over the original request
+          3. evidence/source and exact commit where applicable
+          4. affected code/docs
+          5. recommendation and implementation location
+          6. tests/verification
+          7. security/safety constraints
+          8. evidence state
+          9. questions for other agents
+          10. next handoff or blocker
           EOF
 
-      - name: Upload specialist handoff
+      - name: Upload specialist proposal
         uses: actions/upload-artifact@v4
         with:
-          name: pm5-agent-${{ matrix.agent }}
-          path: swarm-handoffs/
+          name: pm5-round-1-${{ matrix.agent }}
+          path: swarm-round-1/
+          retention-days: 30
+
+  challenge-round:
+    name: Agent - Cross Review / Challenge Round
+    needs: [orchestrator, specialist-fanout]
+    if: ${{ always() && needs.orchestrator.result == 'success' && needs.specialist-fanout.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create communication protocol
+        env:
+          TASK_ID: ${{ needs.orchestrator.outputs.task_id }}
+          ROUNDS: ${{ needs.orchestrator.outputs.rounds }}
+        run: |
+          set -euo pipefail
+          mkdir -p swarm-challenges swarm-round-2
+          cat > "swarm-challenges/${TASK_ID}.md" <<EOF
+          # ${TASK_ID} — cross-agent challenge protocol
+          - maximum rounds: ${ROUNDS}
+
+          ## Challenge routing
+          - ARCHITECT challenges ownership, layering and duplicate subsystems.
+          - PM5_HARDWARE challenges physical-hardware assumptions.
+          - PM5_FIRMWARE challenges lifecycle and compatibility assumptions.
+          - PM5_PROTOCOL challenges framing, addressing, correlation and protocol claims.
+          - BWM_ESP challenges ESP/BWM source and wireless capability claims.
+          - TRANSPORT challenges connection, stream, timeout and reconnect assumptions.
+          - SIMULATOR challenges whether the behaviour can be modeled without inventing hardware facts.
+          - DIAGNOSTICS challenges evidence presentation and diagnostic usefulness.
+          - COMPATIBILITY challenges unsupported compatibility conclusions.
+          - SECURITY challenges unsafe/destructive operations and trust boundaries.
+          - EVIDENCE challenges provenance and evidence-state promotion.
+          - TEST challenges acceptance criteria and regression coverage.
+          - REVIEW challenges the complete proposal and callers/consumers.
+          - FEATURE_ARCHITECT may propose a better function than the original request.
+
+          ## Response rule
+          A challenged agent must answer with ACCEPT / REVISE / REJECT plus evidence. Silence is not approval.
+          Unresolved conflict is a blocker, not permission to guess.
+          EOF
+
+          for agent in RESEARCH_AGENT ARCHITECT_AGENT PM5_HARDWARE_AGENT PM5_FIRMWARE_AGENT PM5_PROTOCOL_AGENT BWM_ESP_AGENT RFID_NFC_AGENT TRANSPORT_AGENT SIMULATOR_AGENT DIAGNOSTICS_AGENT COMPATIBILITY_AGENT EVIDENCE_AGENT SECURITY_AGENT FEATURE_ARCHITECT_AGENT EFFICIENCY_AGENT UX_AGENT DOCUMENTATION_AGENT TEST_AGENT REVIEW_AGENT RELEASE_AGENT; do
+            mkdir -p "swarm-round-2/${agent}"
+            cat > "swarm-round-2/${agent}/challenge-response.md" <<EOF2
+          # ${agent} — challenge response
+          - task: ${TASK_ID}
+          - required decision: ACCEPT | REVISE | REJECT
+
+          ## Messages to answer
+          - Which specialist finding do you challenge?
+          - Which finding challenges your proposal?
+          - What evidence resolves the disagreement?
+          - Does the original function remain the best function?
+          - If not, what better function should replace it and why?
+          - What must NOT be implemented yet?
+          - What is the next blocker?
+
+          ## Evidence states
+          Keep SOURCE, STATIC, UNIT, CI, PROTOCOL, HOST, REAL HARDWARE, HARDWARE VERIFIED and SIMULATED distinct.
+          EOF2
+          done
+
+      - name: Upload challenge protocol
+        uses: actions/upload-artifact@v4
+        with:
+          name: pm5-cross-agent-challenges
+          path: swarm-challenges/
+          retention-days: 30
+
+      - name: Upload round-two contracts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pm5-round-2-contracts
+          path: swarm-round-2/
           retention-days: 30
 
   synthesis:
-    name: Agent - Swarm Synthesis
-    needs: [orchestrator, specialist-fanout]
-    if: ${{ always() && needs.orchestrator.result == 'success' }}
+    name: Agent - Swarm Synthesis / Decision Gate
+    needs: [orchestrator, specialist-fanout, challenge-round]
+    if: ${{ always() && needs.orchestrator.result == 'success' && needs.specialist-fanout.result == 'success' && needs.challenge-round.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Create synthesis contract
+      - name: Create synthesis decision contract
         env:
           TASK_ID: ${{ needs.orchestrator.outputs.task_id }}
         run: |
           set -euo pipefail
           mkdir -p swarm-synthesis
           cat > "swarm-synthesis/${TASK_ID}.md" <<EOF
-          # ${TASK_ID} — synthesis contract
+          # ${TASK_ID} — synthesis decision gate
 
-          Combine specialist findings only after checking evidence and conflicts.
+          The synthesis agent must consume all proposal and challenge artifacts and produce one evidence-backed decision.
 
-          ## Promotion rules
-          - SOURCE evidence remains SOURCE evidence.
-          - PROTOCOL_VERIFIED remains distinct from HARDWARE_VERIFIED.
-          - SIMULATED remains SIMULATED.
-          - CI_VERIFIED proves repository gates only.
-          - conflicting specialist findings require explicit evidence-based resolution.
+          ## Decision hierarchy
+          1. Prefer evidence over authority or majority vote.
+          2. Prefer a better function when a specialist demonstrates a better outcome and preserves scope.
+          3. Reject unsupported physical-hardware assumptions.
+          4. Separate PM3 reference behaviour from PM5 proof.
+          5. Preserve read-only and destructive-operation gates.
+          6. If evidence is insufficient, create RESEARCH / SIMULATOR / HARDWARE-VERIFICATION work instead of guessing.
 
           ## Implementation gate
-          Implementation is allowed only when the synthesis identifies a concrete, evidence-backed change with a focused test plan. Otherwise create a research, simulator or hardware-verification task.
+          Implementation is allowed only when:
+          - architecture owner approves placement;
+          - evidence owner approves provenance/state;
+          - security owner approves safety boundary;
+          - test owner defines acceptance tests;
+          - review owner finds no unresolved contradiction;
+          - required hardware evidence is present for any hardware claim.
 
           ## Required final outputs
-          - decision
+          - final decision
+          - original proposal versus improved proposal
+          - rejected alternatives and reasons
           - evidence ledger update
-          - files to change
-          - tests
-          - security review
+          - exact files to change
+          - tests and CI gates
+          - security/safety constraints
+          - evidence state
           - next blocker
           EOF
 
