@@ -1,0 +1,101 @@
+name: PM5 AI Swarm Synthesis
+
+on:
+  workflow_run:
+    workflows: ["PM5 AI Agent Runtime"]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: pm5-ai-synthesis-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+env:
+  AI_MODEL: gpt-5.6-luna
+
+jobs:
+  synthesis:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    name: Real AI - Orchestrator Synthesis
+    steps:
+      - name: Checkout triggering revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Download specialist findings and challenges
+        uses: actions/download-artifact@v4
+        with:
+          pattern: pm5-ai-*
+          path: synthesis-input
+          merge-multiple: true
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Build synthesis contract
+        run: |
+          set -euo pipefail
+          cat > synthesis-task.md <<'EOF'
+          # PM5 AI swarm synthesis / implementation gate
+
+          Consume every specialist finding and every cross-agent challenge.
+          Produce one evidence-backed engineering decision.
+
+          Decision hierarchy:
+          1. Evidence beats authority or majority vote.
+          2. Prefer a better function when it demonstrably improves the outcome and preserves scope.
+          3. Reject unsupported physical-hardware assumptions.
+          4. Separate PM3 reference behaviour from PM5 proof.
+          5. Preserve read-only and destructive-operation gates.
+          6. Insufficient evidence becomes a research, simulator or hardware-verification blocker.
+
+          Implementation may be recommended only when architecture, evidence,
+          security, test and review gates are satisfied. This synthesis step itself
+          must not modify repository files or operate hardware.
+
+          Required output:
+          - FINAL DECISION
+          - ORIGINAL VS IMPROVED FUNCTION
+          - ACCEPTED FINDINGS
+          - REJECTED/REVISED FINDINGS WITH REASONS
+          - EVIDENCE STATE FOR EACH IMPORTANT CLAIM
+          - EXACT FILES THAT WOULD CHANGE
+          - TEST/CI GATES
+          - SECURITY/SAFETY GATES
+          - HARDWARE VERIFICATION REQUIRED?
+          - NEXT BLOCKER
+          EOF
+
+          {
+            echo '# Agent Registry'
+            cat AI_AGENT_REGISTRY.md
+            echo
+            echo '# Repository README'
+            cat README.md
+            echo
+            echo '# Model-backed findings and challenges'
+            for f in synthesis-input/*; do
+              echo "===== $f ====="
+              cat "$f"
+              echo
+            done
+          } > synthesis-context.md
+
+      - name: Run model-backed synthesis
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "${OPENAI_API_KEY:-}" || { echo 'OPENAI_API_KEY secret is not configured; synthesis cannot call the model.' >&2; exit 1; }
+          python3 tools/ai-swarm/runner.py ORCHESTRATOR_SYNTHESIS synthesis-task.md synthesis-context.md synthesis-output.json
+
+      - name: Upload synthesis decision
+        uses: actions/upload-artifact@v4
+        with:
+          name: pm5-ai-synthesis-decision
+          path: synthesis-output.json
+          retention-days: 30
