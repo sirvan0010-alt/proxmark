@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Adversarial model-backed review of an already-applied implementation diff.
 
-This reviewer is deliberately read-only: it inspects the synthesis and actual
-staged diff, then returns a machine-checkable verdict. It never changes repository
-files or touches PM5 hardware.
+This reviewer is deliberately read-only: it inspects the synthesis, actual staged
+diff and scoped source context, then returns a machine-checkable verdict. It never
+changes repository files or touches PM5 hardware.
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ API_URL = os.getenv("AI_API_URL", "https://api.openai.com/v1/responses")
 MODEL = os.getenv("AI_MODEL", "gpt-5.6-luna")
 
 SYSTEM = """You are REVIEW_AGENT performing the final adversarial review of a PM5 AI implementation candidate.
-Review the ACTUAL staged unified diff, not an imagined change.
+Review the ACTUAL staged unified diff and compare it with the supplied scoped source context.
 Return ONLY valid JSON with these fields:
 {
   "verdict":"APPROVE|REVISE|BLOCK",
@@ -38,6 +38,7 @@ Be adversarial. Reject unsupported PM5 hardware claims, PM3-as-PM5 assumptions,
 new destructive operations, weakened gates, scope violations, hidden dependency
 changes, duplicated subsystems, and changes whose tests do not cover the contract.
 CI/source/simulator evidence must never be treated as physical hardware proof.
+Inspect changed callers/consumers when they are present in the supplied context.
 APPROVE only when no blocking issue remains and the staged diff is coherent with
 the final synthesis. This review does not authorize merge or hardware operation.
 """
@@ -77,15 +78,17 @@ def output_text(response: dict) -> str:
 
 
 def main() -> int:
-    if len(sys.argv) != 4:
-        print("usage: implementation_review_runner.py SYNTHESIS_JSON DIFF_FILE OUTPUT_JSON", file=sys.stderr)
+    if len(sys.argv) != 5:
+        print("usage: implementation_review_runner.py SYNTHESIS_JSON DIFF_FILE CONTEXT_FILE OUTPUT_JSON", file=sys.stderr)
         return 2
-    synthesis_file, diff_file, output_file = sys.argv[1:]
+    synthesis_file, diff_file, context_file, output_file = sys.argv[1:]
     synthesis = json.loads(read(synthesis_file))
     diff = read(diff_file)
+    context = read(context_file)
     prompt = (
         "FINAL SYNTHESIS:\n" + json.dumps(synthesis, ensure_ascii=False, indent=2)
         + "\n\nACTUAL STAGED IMPLEMENTATION DIFF:\n" + diff
+        + "\n\nSCOPED SOURCE CONTEXT:\n" + context
     )
     text = output_text(call_model(prompt))
     match = re.search(r"\{.*\}", text, flags=re.DOTALL)
