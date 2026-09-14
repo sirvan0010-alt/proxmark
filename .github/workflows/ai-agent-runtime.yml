@@ -1,0 +1,110 @@
+name: PM5 AI Agent Runtime
+
+on:
+  workflow_run:
+    workflows: ["PM5 AI Engineering Swarm"]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: pm5-ai-runtime-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+env:
+  AI_MODEL: gpt-5.6-luna
+
+jobs:
+  specialist-runtime:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    name: Real AI - ${{ matrix.agent }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        agent:
+          - RESEARCH_AGENT
+          - ARCHITECT_AGENT
+          - PM5_HARDWARE_AGENT
+          - PM5_FIRMWARE_AGENT
+          - PM5_PROTOCOL_AGENT
+          - BWM_ESP_AGENT
+          - RFID_NFC_AGENT
+          - TRANSPORT_AGENT
+          - SIMULATOR_AGENT
+          - DIAGNOSTICS_AGENT
+          - COMPATIBILITY_AGENT
+          - EVIDENCE_AGENT
+          - SECURITY_AGENT
+          - FEATURE_ARCHITECT_AGENT
+          - EFFICIENCY_AGENT
+          - UX_AGENT
+          - DOCUMENTATION_AGENT
+          - TEST_AGENT
+          - REVIEW_AGENT
+          - RELEASE_AGENT
+      max-parallel: 20
+    steps:
+      - name: Checkout triggering revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Download orchestration contract
+        uses: actions/download-artifact@v4
+        with:
+          name: pm5-orchestrator-contract
+          path: runtime-input/orchestrator
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Download specialist contract
+        uses: actions/download-artifact@v4
+        with:
+          name: pm5-round-1-${{ matrix.agent }}
+          path: runtime-input/specialist
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Run real AI specialist
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ROLE: ${{ matrix.agent }}
+        run: |
+          set -euo pipefail
+          test -n "${OPENAI_API_KEY:-}" || { echo 'OPENAI_API_KEY secret is not configured; runtime cannot call the model.' >&2; exit 1; }
+          TASK_FILE=$(find runtime-input/orchestrator -type f -name '*.md' | head -n1)
+          CONTEXT_FILE=runtime-context.md
+          {
+            echo '# Agent Registry'
+            cat AI_AGENT_REGISTRY.md
+            echo
+            echo '# Project README'
+            cat README.md
+            echo
+            echo '# Specialist contract'
+            find runtime-input/specialist -type f -name '*.md' -print -exec cat {} \;
+          } > "$CONTEXT_FILE"
+          python3 tools/ai-swarm/runner.py "$ROLE" "$TASK_FILE" "$CONTEXT_FILE" "runtime-output/${ROLE}.json"
+
+      - name: Upload model-backed finding
+        uses: actions/upload-artifact@v4
+        with:
+          name: pm5-ai-finding-${{ matrix.agent }}
+          path: runtime-output/${{ matrix.agent }}.json
+          retention-days: 30
+
+  runtime-status:
+    if: ${{ always() }}
+    needs: specialist-runtime
+    runs-on: ubuntu-latest
+    steps:
+      - name: Runtime gate
+        run: |
+          if [ "${{ needs.specialist-runtime.result }}" != "success" ]; then
+            echo 'AI specialist runtime did not complete successfully.'
+            exit 1
+          fi
+          echo 'All model-backed PM5 specialist agents completed.'
