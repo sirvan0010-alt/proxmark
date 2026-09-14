@@ -1,0 +1,96 @@
+name: AI agent registry
+
+on:
+  push:
+    paths:
+      - 'ai/agents/**'
+      - 'AI_AGENT_REGISTRY.md'
+      - 'docs/AI_AGENT_WORKFLOW.md'
+      - 'docs/FEATURE_PROPOSAL_TEMPLATE.md'
+      - 'docs/SECURITY_REVIEW_TEMPLATE.md'
+      - '.github/ISSUE_TEMPLATE/feature-proposal.yml'
+      - '.github/ISSUE_TEMPLATE/security-review.yml'
+      - '.github/workflows/ai-agent-registry.yml'
+  pull_request:
+    paths:
+      - 'ai/agents/**'
+      - 'AI_AGENT_REGISTRY.md'
+      - 'docs/AI_AGENT_WORKFLOW.md'
+      - 'docs/FEATURE_PROPOSAL_TEMPLATE.md'
+      - 'docs/SECURITY_REVIEW_TEMPLATE.md'
+      - '.github/ISSUE_TEMPLATE/feature-proposal.yml'
+      - '.github/ISSUE_TEMPLATE/security-review.yml'
+      - '.github/workflows/ai-agent-registry.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Validate agent registry
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('ai/agents/registry.json')
+          data = json.loads(path.read_text(encoding='utf-8'))
+
+          assert data['schemaVersion'] == 1
+          agents = data['agents']
+          assert isinstance(agents, list) and agents
+
+          required = {
+              'id', 'role', 'riskClass', 'capability',
+              'requiresHardware', 'allowedOperations', 'forbiddenOperations'
+          }
+          ids = []
+          for agent in agents:
+              missing = required - agent.keys()
+              assert not missing, f"{agent.get('id', '<unknown>')} missing {sorted(missing)}"
+              assert agent['id'] not in ids, f"duplicate agent id: {agent['id']}"
+              assert agent['allowedOperations'], f"{agent['id']} has no allowed operations"
+              assert agent['forbiddenOperations'], f"{agent['id']} has no forbidden operations"
+              ids.append(agent['id'])
+
+          expected = {
+              'ORCHESTRATOR', 'HARDWARE_AGENT', 'FIRMWARE_AGENT', 'PROTOCOL_AGENT',
+              'RFID_NFC_AGENT', 'EVIDENCE_AGENT', 'SECURITY_AGENT',
+              'FEATURE_ARCHITECT_AGENT', 'EFFICIENCY_AGENT', 'TEST_AGENT', 'UX_AGENT'
+          }
+          assert set(ids) == expected, f"agent roster mismatch: {set(ids) ^ expected}"
+
+          evidence = set(data['evidenceStates'])
+          required_evidence = {
+              'DETECTED', 'REPORTED', 'EXPECTED', 'HYPOTHESIS',
+              'SIMULATED', 'UNKNOWN', 'HARDWARE_VERIFIED'
+          }
+          assert evidence == required_evidence
+
+          verification = set(data['verificationLevels'])
+          required_verification = {
+              'STATIC_ANALYSIS', 'UNIT_TESTED', 'CI_VERIFIED',
+              'PROTOCOL_VERIFIED', 'HARDWARE_VERIFIED'
+          }
+          assert verification == required_verification
+
+          print(f"Validated {len(agents)} agents")
+          PY
+
+      - name: Validate required contracts
+        run: |
+          test -f AI_AGENT_REGISTRY.md
+          test -f docs/AI_AGENT_WORKFLOW.md
+          test -f docs/FEATURE_PROPOSAL_TEMPLATE.md
+          test -f docs/SECURITY_REVIEW_TEMPLATE.md
+          test -f .github/ISSUE_TEMPLATE/feature-proposal.yml
+          test -f .github/ISSUE_TEMPLATE/security-review.yml
+          grep -q 'FEATURE_ARCHITECT_AGENT' AI_AGENT_REGISTRY.md
+          grep -q 'SECURITY_AGENT' AI_AGENT_REGISTRY.md
+          grep -q 'HARDWARE_VERIFIED' docs/AI_AGENT_WORKFLOW.md
