@@ -245,7 +245,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "${OPENAI_API_KEY:-}" || { echo 'OPENAI_API_KEY secret is not configured; review cannot call the model.' >&2; exit 1; }
-          python3 tools/ai-swarm/implementation_review_runner.py synthesis/synthesis-decision.json implementation-staged.diff implementation-review.json
+          python3 tools/ai-swarm/implementation_review_runner.py synthesis/synthesis-decision.json implementation-staged.diff implementation-context.md implementation-review.json
 
       - name: Enforce adversarial review gate
         run: |
