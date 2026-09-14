@@ -1,15 +1,19 @@
 {
-  "schemaVersion": 3,
-  "lastChecked": "2026-09-13",
+  "schemaVersion": 4,
+  "lastChecked": "2026-09-14",
   "component": "PM5 BWM / ESP32 subsystem",
   "status": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
   "upstream": {
     "repository": "RfidResearchGroup/Proxmark5_BWM_esp32",
     "branch": "master",
-    "commit": "e0c4982800eb7d1ca16045631f3460f9f176427c",
-    "researchDate": "2026-09-13",
-    "ciStatus": "SUCCESS",
-    "ciMeaning": "Upstream firmware build/package workflow completed successfully; this is not physical hardware verification."
+    "commit": "4818511a2b179c61f80f54b5f825428cba51deb8",
+    "researchDate": "2026-09-14",
+    "previousBaseline": "e0c4982800eb7d1ca16045631f3460f9f176427c",
+    "latestChange": "BLE notification retry delay reduced from 100 ms to 10 ms for no-memory and send-failure retry paths; UART RX buffer remains 4096 bytes",
+    "ciStatus": "NOT_YET_RECORDED_FOR_THIS_EXACT_COMMIT",
+    "previousCiStatus": "SUCCESS",
+    "previousCiCommit": "e0c4982800eb7d1ca16045631f3460f9f176427c",
+    "ciMeaning": "CI build/package success is evidence of firmware buildability only; it is not physical hardware verification."
   },
   "deviceModel": {
     "value": "0xDA10",
@@ -19,11 +23,14 @@
   },
   "transport": {
     "uartBaud": 460800,
+    "uartRxBufferBytes": 4096,
+    "bleRetryDelayMs": 10,
     "confidence": "SOURCE_REPORTED",
-    "source": "RfidResearchGroup/Proxmark5_BWM_esp32 DEV.md"
+    "source": "RfidResearchGroup/Proxmark5_BWM_esp32 DEV.md and commit 4818511a2b179c61f80f54b5f825428cba51deb8"
   },
   "capabilities": {
     "ble": "SOURCE_DOCUMENTED_NOT_HARDWARE_VERIFIED",
+    "bleBulkTransferReliabilityFix": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
     "wifi": "SOURCE_DOCUMENTED_NOT_HARDWARE_VERIFIED",
     "wifiScanner": "SOURCE_DOCUMENTED_NOT_HARDWARE_VERIFIED",
     "tcpUdpMqttForwarding": "SOURCE_DOCUMENTED_NOT_HARDWARE_VERIFIED",
