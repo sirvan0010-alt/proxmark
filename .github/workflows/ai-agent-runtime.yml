@@ -96,15 +96,124 @@ jobs:
           path: runtime-output/${{ matrix.agent }}.json
           retention-days: 30
 
+  challenge-runtime:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    needs: specialist-runtime
+    name: Real AI Challenge - ${{ matrix.agent }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        agent:
+          - RESEARCH_AGENT
+          - ARCHITECT_AGENT
+          - PM5_HARDWARE_AGENT
+          - PM5_FIRMWARE_AGENT
+          - PM5_PROTOCOL_AGENT
+          - BWM_ESP_AGENT
+          - RFID_NFC_AGENT
+          - TRANSPORT_AGENT
+          - SIMULATOR_AGENT
+          - DIAGNOSTICS_AGENT
+          - COMPATIBILITY_AGENT
+          - EVIDENCE_AGENT
+          - SECURITY_AGENT
+          - FEATURE_ARCHITECT_AGENT
+          - EFFICIENCY_AGENT
+          - UX_AGENT
+          - DOCUMENTATION_AGENT
+          - TEST_AGENT
+          - REVIEW_AGENT
+          - RELEASE_AGENT
+      max-parallel: 20
+    steps:
+      - name: Checkout triggering revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Download all specialist findings
+        uses: actions/download-artifact@v4
+        with:
+          pattern: pm5-ai-finding-*
+          path: runtime-input/findings
+          merge-multiple: true
+
+      - name: Build challenge context
+        env:
+          ROLE: ${{ matrix.agent }}
+        run: |
+          set -euo pipefail
+          mkdir -p runtime-output
+          TASK_FILE=$(find . -path '*/swarm-tasks/*.md' -print -quit || true)
+          if [ -z "$TASK_FILE" ]; then
+            TASK_FILE=runtime-challenge-task.md
+            cat > "$TASK_FILE" <<'EOF'
+          # PM5 AI swarm challenge round
+          Challenge the specialist findings below. Answer with ACCEPT, REVISE or REJECT.
+          Identify unsupported assumptions, duplicate subsystems, evidence-state errors,
+          unsafe operations, missing tests, and a better function when one is justified.
+          Silence is not approval. Unresolved conflict is a blocker.
+          EOF
+          fi
+          CONTEXT_FILE=runtime-challenge-context.md
+          {
+            echo '# Agent Registry'
+            cat AI_AGENT_REGISTRY.md
+            echo
+            echo '# Challenge routing'
+            echo '- ARCHITECT: layering/ownership/duplication'
+            echo '- PM5_HARDWARE: physical hardware assumptions'
+            echo '- PM5_FIRMWARE: lifecycle/compatibility'
+            echo '- PM5_PROTOCOL: framing/addressing/correlation'
+            echo '- BWM_ESP: ESP/BWM/wireless claims'
+            echo '- TRANSPORT: connection/stream/timeout/reconnect'
+            echo '- SIMULATOR: simulation validity'
+            echo '- DIAGNOSTICS: diagnostic usefulness/evidence presentation'
+            echo '- COMPATIBILITY: compatibility conclusions'
+            echo '- SECURITY: unsafe/destructive operations'
+            echo '- EVIDENCE: provenance/evidence-state promotion'
+            echo '- TEST: acceptance/regression coverage'
+            echo '- REVIEW: complete proposal/callers'
+            echo '- FEATURE_ARCHITECT: better-function alternatives'
+            echo
+            echo '# Specialist findings'
+            for f in runtime-input/findings/*.json; do
+              echo "===== $f ====="
+              cat "$f"
+              echo
+            done
+          } > "$CONTEXT_FILE"
+          echo "$TASK_FILE" > task-path.txt
+          echo "$CONTEXT_FILE" > context-path.txt
+
+      - name: Run real AI challenge
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ROLE: ${{ matrix.agent }}
+        run: |
+          set -euo pipefail
+          test -n "${OPENAI_API_KEY:-}" || { echo 'OPENAI_API_KEY secret is not configured; runtime cannot call the model.' >&2; exit 1; }
+          TASK_FILE=$(cat task-path.txt)
+          CONTEXT_FILE=$(cat context-path.txt)
+          python3 tools/ai-swarm/runner.py "${ROLE}_CHALLENGE" "$TASK_FILE" "$CONTEXT_FILE" "runtime-output/${ROLE}-challenge.json"
+
+      - name: Upload model-backed challenge
+        uses: actions/upload-artifact@v4
+        with:
+          name: pm5-ai-challenge-${{ matrix.agent }}
+          path: runtime-output/${{ matrix.agent }}-challenge.json
+          retention-days: 30
+
   runtime-status:
     if: ${{ always() }}
-    needs: specialist-runtime
+    needs: [specialist-runtime, challenge-runtime]
     runs-on: ubuntu-latest
     steps:
       - name: Runtime gate
         run: |
-          if [ "${{ needs.specialist-runtime.result }}" != "success" ]; then
-            echo 'AI specialist runtime did not complete successfully.'
+          if [ "${{ needs.specialist-runtime.result }}" != "success" ] || [ "${{ needs.challenge-runtime.result }}" != "success" ]; then
+            echo 'PM5 AI runtime did not complete all specialist/challenge gates.'
             exit 1
           fi
-          echo 'All model-backed PM5 specialist agents completed.'
+          echo 'PM5 model-backed specialist and cross-agent challenge rounds completed.'
