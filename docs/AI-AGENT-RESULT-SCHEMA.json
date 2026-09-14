@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Proxmark5 AI Agent Result",
+  "type": "object",
+  "required": ["taskId", "repositorySha", "agentRole", "scope", "evidenceState", "status", "handoff"],
+  "properties": {
+    "taskId": {"type": "string", "minLength": 1},
+    "repositorySha": {"type": "string", "pattern": "^[0-9a-fA-F]{40}$"},
+    "agentRole": {"type": "string", "minLength": 1},
+    "scope": {"type": "array", "items": {"type": "string"}},
+    "changedFiles": {"type": "array", "items": {"type": "string"}},
+    "evidence": {"type": "array", "items": {"type": "string"}},
+    "evidenceState": {"type": "string", "enum": ["SOURCE_DOCUMENTED", "STATIC_ANALYSIS", "UNIT_TESTED", "CI_VERIFIED", "PROTOCOL_VERIFIED", "HOST_VERIFIED", "REAL_HARDWARE_OBSERVED", "HARDWARE_VERIFIED", "AUTOMATED_IN_CLIENT"]},
+    "diagnosticState": {"type": "string", "enum": ["DETECTED", "REPORTED", "EXPECTED", "UNKNOWN", "HYPOTHESIS", "SIMULATED"]},
+    "status": {"type": "string", "enum": ["READY", "BLOCKED", "NEEDS_EVIDENCE", "VERIFIED"]},
+    "tests": {"type": "array", "items": {"type": "string"}},
+    "hardwareRequired": {"type": "boolean"},
+    "securityConstraints": {"type": "array", "items": {"type": "string"}},
+    "assumptions": {"type": "array", "items": {"type": "string"}},
+    "handoff": {"type": "string", "minLength": 1},
+    "blocker": {"type": ["string", "null"]}
+  },
+  "additionalProperties": false
+}
