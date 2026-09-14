@@ -1,13 +1,6 @@
 #!/usr/bin/env python3
-"""Policy gate for PM5 AI-generated implementation proposals.
-
-This tool deliberately does NOT modify the repository, flash hardware, merge PRs,
-or execute device operations. It validates a synthesis decision before a future
-implementation runner is allowed to create an isolated branch/PR.
-"""
-
+"""Fail-closed policy gate for PM5 AI-generated implementation proposals."""
 from __future__ import annotations
-
 import json
 import sys
 from pathlib import Path
@@ -19,7 +12,6 @@ REQUIRED_APPROVALS = {
     "tests": "TEST_AGENT",
     "review": "REVIEW_AGENT",
 }
-
 ALLOWED_DECISIONS = {"IMPLEMENT", "BLOCK", "RESEARCH", "HARDWARE_VERIFY"}
 
 
@@ -28,13 +20,30 @@ def fail(message: str) -> int:
     return 1
 
 
+def load_decision(path: Path) -> dict:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    # runner.py wraps model output in {role, model, response_id, output}.
+    if isinstance(data.get("output"), str):
+        text = data["output"].strip()
+        candidates = [text]
+        if "```json" in text:
+            candidates.append(text.split("```json", 1)[1].split("```", 1)[0].strip())
+        for candidate in candidates:
+            try:
+                parsed = json.loads(candidate)
+                if isinstance(parsed, dict):
+                    return parsed
+            except json.JSONDecodeError:
+                pass
+    return data
+
+
 def main() -> int:
     if len(sys.argv) != 2:
         return fail("usage: implementation_gate.py <synthesis.json>")
-
     path = Path(sys.argv[1])
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = load_decision(path)
     except Exception as exc:
         return fail(f"invalid synthesis JSON: {exc}")
 
@@ -47,7 +56,6 @@ def main() -> int:
     approvals = data.get("approvals", {})
     if not isinstance(approvals, dict):
         return fail("approvals must be an object")
-
     for key, role in REQUIRED_APPROVALS.items():
         value = approvals.get(key, {})
         if not isinstance(value, dict) or value.get("role") != role or value.get("status") != "APPROVE":
@@ -56,16 +64,14 @@ def main() -> int:
     evidence = str(data.get("evidence_state", "UNKNOWN")).upper()
     if evidence in {"HYPOTHESIS", "UNKNOWN", "SIMULATED"}:
         return fail(f"evidence state {evidence} cannot authorize implementation")
-
     if data.get("requires_hardware_verification") is True:
         return fail("hardware verification is required before implementation")
-
     if data.get("destructive_operation") is True:
         return fail("destructive operation cannot be autonomously authorized")
 
     scope = data.get("implementation_scope")
-    if not isinstance(scope, list) or not scope:
-        return fail("implementation_scope must be a non-empty list")
+    if not isinstance(scope, list) or not scope or not all(isinstance(x, str) and x.strip() for x in scope):
+        return fail("implementation_scope must be a non-empty list of paths")
 
     print("IMPLEMENTATION_GATE=PASSED")
     print("MODE=ISOLATED_BRANCH_ONLY")
