@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "project": "Proxmark5 Control Center",
+  "authority": {
+    "humanMaintainer": "final",
+    "evidence": "technical truth",
+    "agentProposal": "not_authorization"
+  },
+  "agents": [
+    {
+      "id": "ORCHESTRATOR",
+      "role": "coordination",
+      "riskClass": "control",
+      "capability": "coordinate",
+      "requiresHardware": false,
+      "allowedOperations": ["inspect", "plan", "delegate", "record"],
+      "forbiddenOperations": ["invent_hardware_facts", "authorize_destructive_hardware_action"]
+    },
+    {
+      "id": "HARDWARE_AGENT",
+      "role": "hardware",
+      "riskClass": "read_only",
+      "capability": "inspect",
+      "requiresHardware": false,
+      "allowedOperations": ["inspect", "model", "record"],
+      "forbiddenOperations": ["flash", "erase", "modify_hardware_without_confirmation"]
+    },
+    {
+      "id": "FIRMWARE_AGENT",
+      "role": "firmware",
+      "riskClass": "sensitive",
+      "capability": "analyze",
+      "requiresHardware": false,
+      "allowedOperations": ["inspect", "compare", "plan", "validate_backup"],
+      "forbiddenOperations": ["silent_flash", "silent_erase", "silent_downgrade"]
+    },
+    {
+      "id": "PROTOCOL_AGENT",
+      "role": "protocol",
+      "riskClass": "read_only",
+      "capability": "model",
+      "requiresHardware": false,
+      "allowedOperations": ["inspect", "parse", "model", "test", "record"],
+      "forbiddenOperations": ["claim_hardware_verified_without_evidence"]
+    },
+    {
+      "id": "RFID_NFC_AGENT",
+      "role": "rfid_nfc",
+      "riskClass": "security_sensitive",
+      "capability": "analyze",
+      "requiresHardware": false,
+      "allowedOperations": ["inspect", "document", "simulate", "test"],
+      "forbiddenOperations": ["unauthorized_operational_abuse_workflow"]
+    },
+    {
+      "id": "EVIDENCE_AGENT",
+      "role": "evidence",
+      "riskClass": "control",
+      "capability": "validate",
+      "requiresHardware": false,
+      "allowedOperations": ["inspect", "cross_check", "classify", "record"],
+      "forbiddenOperations": ["promote_hypothesis_to_fact"]
+    },
+    {
+      "id": "SECURITY_AGENT",
+      "role": "security",
+      "riskClass": "control",
+      "capability": "review",
+      "requiresHardware": false,
+      "allowedOperations": ["threat_model", "review", "harden", "fuzz", "test"],
+      "forbiddenOperations": ["weaken_safety_gate", "bypass_authorization"]
+    },
+    {
+      "id": "FEATURE_ARCHITECT_AGENT",
+      "role": "feature_architecture",
+      "riskClass": "proposal",
+      "capability": "propose",
+      "requiresHardware": false,
+      "allowedOperations": ["inspect", "propose", "score", "prioritize", "record"],
+      "forbiddenOperations": ["treat_proposal_as_authorization", "claim_unverified_capability"]
+    },
+    {
+      "id": "EFFICIENCY_AGENT",
+      "role": "efficiency",
+      "riskClass": "proposal",
+      "capability": "optimize",
+      "requiresHardware": false,
+      "allowedOperations": ["inspect", "measure", "propose", "test"],
+      "forbiddenOperations": ["hide_failures", "reduce_evidence_quality"]
+    },
+    {
+      "id": "TEST_AGENT",
+      "role": "verification",
+      "riskClass": "control",
+      "capability": "verify",
+      "requiresHardware": false,
+      "allowedOperations": ["test", "fuzz", "validate", "record"],
+      "forbiddenOperations": ["equate_ci_with_hardware_verification"]
+    },
+    {
+      "id": "UX_AGENT",
+      "role": "ux",
+      "riskClass": "read_only",
+      "capability": "design",
+      "requiresHardware": false,
+      "allowedOperations": ["inspect", "propose", "document", "test"],
+      "forbiddenOperations": ["hide_uncertainty", "present_simulation_as_detection"]
+    }
+  ],
+  "evidenceStates": [
+    "DETECTED",
+    "REPORTED",
+    "EXPECTED",
+    "HYPOTHESIS",
+    "SIMULATED",
+    "UNKNOWN",
+    "HARDWARE_VERIFIED"
+  ],
+  "verificationLevels": [
+    "STATIC_ANALYSIS",
+    "UNIT_TESTED",
+    "CI_VERIFIED",
+    "PROTOCOL_VERIFIED",
+    "HARDWARE_VERIFIED"
+  ]
+}
