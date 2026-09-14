@@ -1,18 +1,25 @@
-# PM5 BWM/ESP32 Upstream Snapshot — 2026-09-13
+# PM5 BWM/ESP32 Upstream Snapshot — 2026-09-14
 
 ## Purpose
 
-This snapshot records the upstream state used by PM5 Control Center for the Proxmark5 BLE/WiFi module (BWM/ESP32). It is provenance, not hardware verification.
+This snapshot records the current upstream state used by PM5 Control Center for the Proxmark5 BLE/WiFi module (BWM/ESP32). It is provenance, not hardware verification.
 
 ## Upstream repository
 
 - Repository: `RfidResearchGroup/Proxmark5_BWM_esp32`
 - Branch: `master`
-- Latest inspected merge commit: `e0c4982800eb7d1ca16045631f3460f9f176427c`
-- Parent feature commit: `847e1e51c0188a36c0bff73cc0884d9846f63f97`
-- Latest relevant change inspected: build instructions for ESP32-C2/BWM firmware
-- Previous relevant commit: `d04bda6919ed9810707d1fce58c9e20ca704c12e` (`INSTALL.md` updates)
-- Research date: 2026-09-13
+- Latest inspected commit: `4818511a2b179c61f80f54b5f825428cba51deb8`
+- Commit: `Merge pull request #4 from nieldk/master — Fix BLE bulk-transfer drops`
+- Previous inspected baseline: `e0c4982800eb7d1ca16045631f3460f9f176427c`
+- Research date: 2026-09-14
+
+## New upstream transport-reliability evidence
+
+Commit `4818511a2b179c61f80f54b5f825428cba51deb8` changes the BWM BLE notification retry delay from 100 ms to 10 ms for both no-memory and send-failure retry paths in `components/app_ble_spp/app_ble_spp.c`.
+
+The same commit retains `UART_RX_BUF_SIZE` at 4096 bytes and documents that buffer as absorbing device-to-host bursts while BLE drains them.
+
+This is a source-level upstream transport reliability improvement. It does **not** by itself prove that a physical PM5+BWM unit connected to PM5 Control Center has reliable BLE bulk transfer.
 
 ## DEV.md evidence
 
@@ -22,17 +29,17 @@ The documented architecture includes BLE SPP passthrough, Wi-Fi scanner, TCP/UDP
 
 ## CI evidence
 
-The upstream GitHub Actions workflow `ESP-IDF Build and Package` was inspected at commit `e0c4982800eb7d1ca16045631f3460f9f176427c`.
+The upstream repository has a published `ESP-IDF Build and Package` workflow. The previously inspected successful run at commit `e0c4982800eb7d1ca16045631f3460f9f176427c` proves the upstream firmware was buildable at that baseline.
 
-The latest inspected run completed successfully and produced the firmware package. The successful job included ESP-IDF setup, firmware build, firmware merge, package preparation and artifact upload.
+The new commit `4818511a2b179c61f80f54b5f825428cba51deb8` must be treated as a newer source baseline until a successful CI run for that exact commit is independently recorded.
 
-CI success proves that the upstream firmware is currently buildable in the published workflow. It does not prove PM5↔BWM UART wiring, physical BWM communication, BLE/Wi-Fi operation, or compatibility with a particular physical PM5 revision.
+CI success proves build/package reproducibility only. It does not prove PM5↔BWM UART wiring, physical BLE/Wi-Fi operation, or compatibility with a particular physical PM5 revision.
 
 ## Protocol relationship to Control Center
 
 The repository already records verified BWM protocol provenance in `docs/BWM_PROTOCOL.md`, tied to upstream commit `b918166128e05455c2dcb4e232216d453bbf29ee`. That document establishes source-level evidence for frame format, CRC scope, command provenance and read-only adapter requirements.
 
-The new upstream snapshot must therefore be treated as a **new firmware/capability baseline**, not as a replacement for the protocol provenance record.
+This snapshot is a **new firmware/capability baseline**, not a replacement for the protocol provenance record.
 
 ## Evidence classification
 
@@ -44,13 +51,18 @@ The new upstream snapshot must therefore be treated as a **new firmware/capabili
 - ESP32-C2 / ESP8684 platform documented upstream.
 - Device model identifier `0xDA10` documented upstream.
 - Default UART 460800 documented upstream.
-- Firmware build reproducibility demonstrated by successful upstream CI run.
+- BLE retry behaviour change is present in upstream commit `4818511a2b179c61f80f54b5f825428cba51deb8`.
+- UART receive buffer remains 4096 bytes in that commit.
 
-### NOT HARDWARE VERIFIED
+### CI VERIFIED AT PREVIOUS BASELINE
+
+- Firmware build/package workflow succeeded at `e0c4982800eb7d1ca16045631f3460f9f176427c`.
+
+### NOT HARDWARE VERIFIED BY THIS SNAPSHOT
 
 - Physical PM5+BWM communication.
 - Physical BWM model identification from the connected device.
-- Actual BLE connection through a PM5/BWM unit.
+- Reliable BLE bulk transfer on the target unit after the new retry change.
 - Actual Wi-Fi scan/forwarding through a PM5/BWM unit.
 - Actual TCP/UDP/MQTT forwarding through a PM5/BWM unit.
 - Actual OTA operation on the target module.
@@ -59,13 +71,13 @@ The new upstream snapshot must therefore be treated as a **new firmware/capabili
 
 ## Required implementation rule
 
-Do not promote upstream source/CI evidence directly to `HARDWARE VERIFIED`.
+Do not promote upstream source/CI evidence directly to `HARDWARE_VERIFIED`.
 
 The PM5 Control Center evidence model must continue to distinguish:
 
 `PROTOCOL VERIFIED` → source/protocol basis
 
-`CI VERIFIED` → upstream firmware builds successfully
+`CI VERIFIED` → upstream firmware builds successfully at an exact commit
 
 `HARDWARE VERIFIED` → reproducible observation on the physical PM5+BWM device
 
@@ -79,9 +91,10 @@ The first real PM5+BWM session should capture, without mutation:
 4. BWM UART communication;
 5. BWM asynchronous broadcast behaviour;
 6. BLE status;
-7. Wi-Fi status;
-8. capability responses;
-9. raw request/response frames where safe;
-10. exact firmware versions/commits where exposed.
+7. BLE bulk-transfer behaviour under representative PM5 traffic;
+8. Wi-Fi status;
+9. capability responses;
+10. raw request/response frames where safe;
+11. exact firmware versions/commits where exposed.
 
 Only the individual observations that are actually captured and reproducible should be upgraded to `HARDWARE VERIFIED`.
