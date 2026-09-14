@@ -1,0 +1,180 @@
+name: PM5 AI Engineering Swarm
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'Engineering task or next blocker'
+        required: true
+        type: string
+      scope:
+        description: 'Optional scope, e.g. BWM, protocol, diagnostics, firmware'
+        required: false
+        default: 'auto'
+        type: string
+  issues:
+    types: [opened, labeled]
+
+permissions:
+  contents: read
+  issues: write
+
+# This workflow is the orchestration/task-factory layer. It creates deterministic
+# specialist handoffs; it does not pretend that a GitHub Action itself is an LLM.
+# A future AI runner can consume these artifacts and return proposed patches/reviews.
+
+jobs:
+  orchestrator:
+    name: Agent - PM5 Orchestrator
+    runs-on: ubuntu-latest
+    outputs:
+      task_id: ${{ steps.task.outputs.task_id }}
+      scope: ${{ steps.task.outputs.scope }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build task contract
+        id: task
+        env:
+          INPUT_TASK: ${{ inputs.task }}
+          INPUT_SCOPE: ${{ inputs.scope }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          TASK="${INPUT_TASK:-${ISSUE_TITLE:-PM5 engineering task}}"
+          SCOPE="${INPUT_SCOPE:-auto}"
+          ID="PM5-$(date -u +%Y%m%d)-${GITHUB_RUN_ID}"
+          mkdir -p swarm-tasks
+          cat > "swarm-tasks/${ID}.md" <<EOF
+          # ${ID}
+          - repository: ${GITHUB_REPOSITORY}
+          - commit: ${GITHUB_SHA}
+          - task: ${TASK}
+          - scope: ${SCOPE}
+          - evidence rule: source/protocol/CI evidence must not be promoted to hardware verification
+          - required output: analysis, affected files, evidence references, tests, risks, next blocker
+          - hardware policy: no flashing, erasing, charger writes, FPGA power/configuration, or destructive action without explicit human confirmation and established evidence
+          EOF
+          echo "task_id=${ID}" >> "$GITHUB_OUTPUT"
+          echo "scope=${SCOPE}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload orchestrator contract
+        uses: actions/upload-artifact@v4
+        with:
+          name: pm5-orchestrator-contract
+          path: swarm-tasks/
+          retention-days: 30
+
+  specialist-fanout:
+    name: Agent - ${{ matrix.agent }}
+    needs: orchestrator
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        agent:
+          - RESEARCH_AGENT
+          - ARCHITECT_AGENT
+          - PM5_HARDWARE_AGENT
+          - PM5_FIRMWARE_AGENT
+          - PM5_PROTOCOL_AGENT
+          - BWM_ESP_AGENT
+          - RFID_NFC_AGENT
+          - TRANSPORT_AGENT
+          - SIMULATOR_AGENT
+          - DIAGNOSTICS_AGENT
+          - COMPATIBILITY_AGENT
+          - EVIDENCE_AGENT
+          - SECURITY_AGENT
+          - FEATURE_ARCHITECT_AGENT
+          - EFFICIENCY_AGENT
+          - UX_AGENT
+          - DOCUMENTATION_AGENT
+          - TEST_AGENT
+          - REVIEW_AGENT
+          - RELEASE_AGENT
+      max-parallel: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create specialist handoff
+        env:
+          AGENT: ${{ matrix.agent }}
+          TASK_ID: ${{ needs.orchestrator.outputs.task_id }}
+          SCOPE: ${{ needs.orchestrator.outputs.scope }}
+        run: |
+          set -euo pipefail
+          mkdir -p swarm-handoffs
+          cat > "swarm-handoffs/${AGENT}.md" <<EOF
+          # ${AGENT}
+          - task: ${TASK_ID}
+          - repository: ${GITHUB_REPOSITORY}
+          - commit: ${GITHUB_SHA}
+          - scope: ${SCOPE}
+
+          ## Required method
+          Inspect the current repository and relevant upstream source before proposing changes. Preserve exact provenance. Do not infer physical PM5 behaviour from PM3 source, simulator code, source constants or CI.
+
+          ## Required output
+          1. finding
+          2. evidence/source and exact commit where applicable
+          3. affected code/docs
+          4. recommendation
+          5. tests/verification
+          6. security/safety constraints
+          7. evidence state
+          8. next handoff or blocker
+          EOF
+
+      - name: Upload specialist handoff
+        uses: actions/upload-artifact@v4
+        with:
+          name: pm5-agent-${{ matrix.agent }}
+          path: swarm-handoffs/
+          retention-days: 30
+
+  synthesis:
+    name: Agent - Swarm Synthesis
+    needs: [orchestrator, specialist-fanout]
+    if: ${{ always() && needs.orchestrator.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create synthesis contract
+        env:
+          TASK_ID: ${{ needs.orchestrator.outputs.task_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p swarm-synthesis
+          cat > "swarm-synthesis/${TASK_ID}.md" <<EOF
+          # ${TASK_ID} — synthesis contract
+
+          Combine specialist findings only after checking evidence and conflicts.
+
+          ## Promotion rules
+          - SOURCE evidence remains SOURCE evidence.
+          - PROTOCOL_VERIFIED remains distinct from HARDWARE_VERIFIED.
+          - SIMULATED remains SIMULATED.
+          - CI_VERIFIED proves repository gates only.
+          - conflicting specialist findings require explicit evidence-based resolution.
+
+          ## Implementation gate
+          Implementation is allowed only when the synthesis identifies a concrete, evidence-backed change with a focused test plan. Otherwise create a research, simulator or hardware-verification task.
+
+          ## Required final outputs
+          - decision
+          - evidence ledger update
+          - files to change
+          - tests
+          - security review
+          - next blocker
+          EOF
+
+      - name: Upload synthesis contract
+        uses: actions/upload-artifact@v4
+        with:
+          name: pm5-swarm-synthesis
+          path: swarm-synthesis/
+          retention-days: 30
