@@ -19,6 +19,11 @@ public static class Pm3CommandCode
     public const ushort FlashMemGetInfo = 0x0148;      // CMD_FLASHMEM_GET_INFO (read-only query)
     public const ushort LfSamplingGetConfig = 0x0228; // CMD_LF_SAMPLING_GET_CONFIG
 
+    // PM3 NG control command used by the upstream client to stop a running
+    // device-side loop. Upstream value verified in include/pm3_cmd.h.
+    // It is intentionally NOT part of the read-only probe allow-list.
+    public const ushort BreakLoop = 0x0118;            // CMD_BREAK_LOOP
+
     // PM5/BWM firmware command introduced upstream in RfidResearchGroup/proxmark3#3552.
     // This is intentionally NOT part of the read-only allow-list: sending it changes
     // the charger register. Upstream firmware defaults the target to 4100 mV, which
