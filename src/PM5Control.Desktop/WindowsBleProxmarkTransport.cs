@@ -13,8 +13,13 @@ namespace PM5Control.Desktop;
 /// <summary>
 /// Native Windows GATT transport for the PM5 BWM BLE SPP service.
 /// Upstream evidence: RfidResearchGroup/Proxmark5_BWM_esp32 defines SPP
-/// service 0xAE86 and data characteristic 0xAE88. The transport carries the
-/// normal PM3 NG byte stream unchanged; BLE is only the transport layer.
+/// service 0xAE86 and data characteristic 0xAE88.
+///
+/// Wire model is deliberately explicit:
+/// host -> BWM APP_CMD_SEND_FORWARD_DATA (5000) -> raw PM3 NG command;
+/// BWM -> host APP_BROADCAST_DATA_FORWARD (8089) -> raw PM3 NG response bytes.
+/// The BWM acknowledgement (5000) is not a PM3 response and is therefore not
+/// fed into the PM3 parser.
 /// </summary>
 internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport, IPm3ReadOnlyTransport, IProxmarkAbortTransport
 {
@@ -32,11 +37,17 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport, IPm3Read
     private BluetoothLEDevice? _device;
     private GattCharacteristic? _characteristic;
     private readonly SemaphoreSlim _rxSignal = new(0);
+    private readonly SemaphoreSlim _writeGate = new(1, 1);
     private readonly object _rxLock = new();
     private readonly List<byte> _rxBuffer = new();
+    private readonly BwmStreamParser _bwmParser = new();
     private bool _notificationsEnabled;
 
-    public WindowsBleProxmarkTransport(ulong bluetoothAddress) => _bluetoothAddress = bluetoothAddress;
+    public WindowsBleProxmarkTransport(ulong bluetoothAddress)
+    {
+        _bluetoothAddress = bluetoothAddress;
+        _bwmParser.FrameReceived += OnBwmFrame;
+    }
 
     public string TransportName => "Bluetooth LE / PM5 BWM SPP";
     public bool IsConnected => _device is not null && _characteristic is not null && _notificationsEnabled;
@@ -109,16 +120,17 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport, IPm3Read
             throw new InvalidOperationException($"Command 0x{command:X4} is outside the read-only BLE probe policy.");
 
         var request = Pm3NgFrame.EncodeCommand(command);
+        var bwmRequest = BwmFrameCodec.EncodeRequest((ushort)BwmCommandCode.SendForwardData, request);
         var deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * TimeoutMs / 1000;
         var debugFrames = new List<Pm3NgResponse>();
         var unmatched = new List<Pm3NgResponse>();
-        await WriteChunkedAsync(request, cancellationToken).ConfigureAwait(false);
+        await WriteChunkedAsync(bwmRequest, cancellationToken).ConfigureAwait(false);
 
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var remaining = RemainingMilliseconds(deadline);
-            if (remaining <= 0) throw new TimeoutException($"PM5 BLE transaction timed out waiting for CMD 0x{command:X4}; debug={debugFrames.Count}; unmatched={unmatched.Count}; TX={Convert.ToHexString(request)}");
+            if (remaining <= 0) throw new TimeoutException($"PM5 BLE transaction timed out waiting for CMD 0x{command:X4}; debug={debugFrames.Count}; unmatched={unmatched.Count}; TX={Convert.ToHexString(bwmRequest)}");
             while (TryTakeFrame(out var response))
             {
                 if (response is null) continue;
@@ -147,15 +159,13 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport, IPm3Read
     /// <summary>
     /// Abort a running PM3 operation through the verified BWM transparent-forward path.
     /// BWM APP_CMD_SEND_FORWARD_DATA (5000) carries the raw PM3 NG CMD_BREAK_LOOP frame.
-    /// Upstream BWM firmware forwards that payload to the PM5 and returns forwarded
-    /// device data as a broadcast. This is not a guessed BWM-specific BREAK command.
+    /// Upstream BWM firmware forwards that payload to the PM5; forwarded device data
+    /// returns as APP_BROADCAST_DATA_FORWARD (8089).
     /// </summary>
     public Task AbortCurrentOperationAsync(CancellationToken cancellationToken = default)
     {
         var pm3BreakLoop = Pm3NgFrame.EncodeCommand(Pm3CommandCode.BreakLoop);
-        var bwmRequest = BwmFrameCodec.EncodeRequest(
-            (ushort)BwmCommandCode.SendForwardData,
-            pm3BreakLoop);
+        var bwmRequest = BwmFrameCodec.EncodeRequest((ushort)BwmCommandCode.SendForwardData, pm3BreakLoop);
         return WriteRawAsync(bwmRequest, cancellationToken);
     }
 
@@ -175,17 +185,13 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport, IPm3Read
 
     private async Task WriteRawAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken)
     {
-        if (!IsConnected)
-            throw new InvalidOperationException("PM5 BLE transport is not connected.");
         var characteristic = _characteristic ?? throw new InvalidOperationException("BLE characteristic is unavailable.");
+        if (!IsConnected) throw new InvalidOperationException("BLE device is not connected.");
         await _writeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var status = await characteristic.WriteValueAsync(
-                CryptographicBuffer.CreateFromByteArray(data.ToArray()),
-                GattWriteOption.WriteWithoutResponse);
-            if (status != GattCommunicationStatus.Success)
-                throw new IOException($"BLE write failed; status={status}.");
+            var status = await characteristic.WriteValueAsync(CryptographicBuffer.CreateFromByteArray(data.ToArray()), GattWriteOption.WriteWithoutResponse);
+            if (status != GattCommunicationStatus.Success) throw new IOException($"BLE write failed; status={status}.");
         }
         finally
         {
@@ -193,14 +199,20 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport, IPm3Read
         }
     }
 
-    private readonly SemaphoreSlim _writeGate = new(1, 1);
-
     private void OnValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args)
     {
         CryptographicBuffer.CopyToByteArray(args.CharacteristicValue, out var data);
         if (data is null || data.Length == 0) return;
-        lock (_rxLock) _rxBuffer.AddRange(data);
+        _bwmParser.Append(data);
         DataReceived?.Invoke(data);
+    }
+
+    private void OnBwmFrame(BwmFrame frame)
+    {
+        if (frame.Kind != BwmFrameKind.Broadcast || frame.CommandId != (ushort)BwmBroadcastType.DataForward)
+            return;
+
+        lock (_rxLock) _rxBuffer.AddRange(frame.Payload);
         _rxSignal.Release();
     }
 
