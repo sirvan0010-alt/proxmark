@@ -25,8 +25,8 @@ public sealed class WiFiCapabilityMatrix : CapabilityMatrixBase
         RegisterDocumentedSupported(WiFiCapabilityIds.ProbeReqTx,"Probe Request TX","Probe request transmit capability test",WirelessCapabilityCategory.FrameInjection,"ESP-IDF 802.11 TX API");
         RegisterDocumentedSupported(WiFiCapabilityIds.ProbeRspTx,"Probe Response TX","Probe response transmit capability test",WirelessCapabilityCategory.FrameInjection,"ESP-IDF 802.11 TX API");
         RegisterDocumentedSupported(WiFiCapabilityIds.ActionTx,"Action TX","802.11 action-frame transmit capability test",WirelessCapabilityCategory.FrameInjection,"ESP-IDF 802.11 TX API");
-        RegisterDocumentedPolicyDisabled(WiFiCapabilityIds.DeauthTx,"Deauth TX","Deauthentication transmit","FrameInjection","Active deauthentication is policy-gated","Project wireless policy");
-        RegisterDocumentedPolicyDisabled(WiFiCapabilityIds.DisassocTx,"Disassoc TX","Disassociation transmit","FrameInjection","Active disassociation is policy-gated","Project wireless policy");
+        RegisterDocumentedPolicyDisabled(WiFiCapabilityIds.DeauthTx,"Deauth TX","Deauthentication transmit",WirelessCapabilityCategory.FrameInjection,"Active deauthentication is policy-gated","Project wireless policy");
+        RegisterDocumentedPolicyDisabled(WiFiCapabilityIds.DisassocTx,"Disassoc TX","Disassociation transmit",WirelessCapabilityCategory.FrameInjection,"Active disassociation is policy-gated","Project wireless policy");
         RegisterDocumentedSupported(WiFiCapabilityIds.ApSta,"AP+STA","Concurrent AP and station operation",WirelessCapabilityCategory.Connectivity,"ESP-IDF APSTA mode");
         RegisterDocumentedSupported(WiFiCapabilityIds.Band24,"2.4 GHz","2.4GHz Wi-Fi band",WirelessCapabilityCategory.Connectivity,"ESP32-C2 datasheet");
         RegisterDocumentedNotSupported(WiFiCapabilityIds.Band5,"5 GHz","5GHz Wi-Fi band",WirelessCapabilityCategory.Connectivity,"ESP32-C2 is 2.4GHz-only");
