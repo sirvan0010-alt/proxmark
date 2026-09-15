@@ -2,6 +2,8 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Storage.Streams;
+using PM5Control.Core.Protocols.Bwm;
+using PM5Control.Core.Protocols.Pm3;
 
 namespace PM5Control.Core.Connections;
 
@@ -9,9 +11,10 @@ namespace PM5Control.Core.Connections;
 /// Native Windows BLE transport for the Proxmark5 Battery Wireless Module.
 /// The PM5 BWM exposes a serial-like GATT service used by the upstream
 /// pm5_ble_bridge.py implementation: service AE86, data characteristic AE88.
-/// This transport carries raw BWM frames; command policy remains above it.
+/// This transport carries BWM frames; PM3/NG protocol bytes are payload data
+/// of the verified BWM transparent-forward command.
 /// </summary>
-public sealed class WindowsBleProxmarkTransport : IProxmarkTransport
+public sealed class WindowsBleProxmarkTransport : IProxmarkTransport, IProxmarkAbortTransport
 {
     public static readonly Guid DefaultServiceUuid = new("0000ae86-0000-1000-8000-00805f9b34fb");
     public static readonly Guid DefaultCharacteristicUuid = new("0000ae88-0000-1000-8000-00805f9b34fb");
@@ -100,6 +103,31 @@ public sealed class WindowsBleProxmarkTransport : IProxmarkTransport
 
     public async Task<byte[]> SendAsync(ReadOnlyMemory<byte> request, CancellationToken cancellationToken = default)
     {
+        await WriteRawAsync(request, cancellationToken).ConfigureAwait(false);
+        return Array.Empty<byte>();
+    }
+
+    /// <summary>
+    /// Abort a running PM3 operation through the verified BWM transparent-forward path.
+    /// The BWM command is APP_CMD_SEND_FORWARD_DATA (5000); its payload is the raw
+    /// PM3 NG CMD_BREAK_LOOP frame. Upstream BWM firmware forwards that payload to
+    /// the PM5 over its UART and returns forwarded device data as a broadcast.
+    ///
+    /// This is deliberately not a guessed BWM-specific BREAK command: 5000 is the
+    /// documented/source-verified transparent-forward command, while 0x0118 is the
+    /// source-verified PM3 CMD_BREAK_LOOP command carried inside it.
+    /// </summary>
+    public Task AbortCurrentOperationAsync(CancellationToken cancellationToken = default)
+    {
+        var pm3BreakLoop = Pm3NgFrame.EncodeCommand(Pm3CommandCode.BreakLoop);
+        var bwmRequest = BwmFrameCodec.EncodeRequest(
+            (ushort)BwmCommandCode.SendForwardData,
+            pm3BreakLoop);
+        return WriteRawAsync(bwmRequest, cancellationToken);
+    }
+
+    private async Task WriteRawAsync(ReadOnlyMemory<byte> request, CancellationToken cancellationToken)
+    {
         var characteristic = _characteristic ?? throw new InvalidOperationException("BLE transport is not connected.");
         if (!IsConnected)
             throw new InvalidOperationException("BLE device is not connected.");
@@ -107,18 +135,12 @@ public sealed class WindowsBleProxmarkTransport : IProxmarkTransport
         await _writeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            // The BWM BLE SPP accepts a GATT write and handles the response via
-            // notifications. Windows handles ATT MTU fragmentation for us.
+            // Windows handles ATT MTU fragmentation for the GATT write.
             var buffer = request.ToArray().AsBuffer();
             var result = await characteristic.WriteValueWithResultAsync(
                 buffer, GattWriteOption.WriteWithoutResponse).AsTask(cancellationToken).ConfigureAwait(false);
             if (result.Status != GattCommunicationStatus.Success)
                 throw new IOException($"PM5 BLE write failed ({result.Status}).");
-
-            // The protocol layer already owns frame correlation. Returning an
-            // empty response makes this transport usable for streaming/event
-            // consumers; request/response adapters should consume DataReceived.
-            return Array.Empty<byte>();
         }
         finally
         {
