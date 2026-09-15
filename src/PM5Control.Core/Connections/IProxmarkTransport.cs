@@ -27,3 +27,16 @@ public interface IProxmarkTransport : IAsyncDisposable
     Task DisconnectAsync(CancellationToken cancellationToken = default);
     Task<byte[]> SendAsync(ReadOnlyMemory<byte> request, CancellationToken cancellationToken = default);
 }
+
+/// <summary>
+/// Optional capability for transports that can deliver the PM3 NG abort
+/// command independently of the currently awaited response.
+///
+/// This is deliberately separate from IProxmarkTransport: BWM control framing
+/// and transparent PM3 forwarding are distinct protocols and must not be
+/// conflated until their exact wire path is verified for a transport.
+/// </summary>
+public interface IProxmarkAbortTransport
+{
+    Task AbortCurrentOperationAsync(CancellationToken cancellationToken = default);
+}
