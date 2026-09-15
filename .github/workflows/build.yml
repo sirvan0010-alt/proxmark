@@ -45,9 +45,11 @@ jobs:
           repo = data['upstream']['repository']
           commit = data['upstream']['commit']
           url = f'https://github.com/{repo}.git'
-          out = subprocess.check_output(['git', 'ls-remote', url, commit], text=True).strip()
-          if not out or not out.startswith(commit + '\t'):
-              raise SystemExit(f'Pinned upstream commit is not reachable: {repo}@{commit}')
+          # git ls-remote <repo> <sha> only searches advertised refs; it does
+          # not prove that an arbitrary reachable commit exists. Fetch the
+          # pinned object explicitly and verify that Git can resolve it.
+          subprocess.run(['git', 'fetch', '--no-tags', '--depth=1', url, commit], check=True)
+          subprocess.run(['git', 'cat-file', '-e', f'{commit}^{{commit}}'], check=True)
           print(f'UPSTREAM VERIFIED: {repo}@{commit}')
           PY
 
