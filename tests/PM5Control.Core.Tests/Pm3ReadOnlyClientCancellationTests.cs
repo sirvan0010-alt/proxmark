@@ -27,7 +27,7 @@ public sealed class Pm3ReadOnlyClientCancellationTests
         public async Task<Pm3NgExchange> SendReadOnlyAsync(ushort command, CancellationToken cancellationToken = default)
         {
             await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
-            throw new UnreachableException();
+            throw new InvalidOperationException("Cancellation should have interrupted the pending transport operation.");
         }
 
         public Task AbortCurrentOperationAsync(CancellationToken cancellationToken = default)
