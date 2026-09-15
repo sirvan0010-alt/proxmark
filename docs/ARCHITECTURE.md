@@ -28,7 +28,7 @@ A failed or unsupported probe becomes an explicit `UNKNOWN`/`UNSUPPORTED` result
 
 ## Why C# / .NET 10
 
-The shared implementation is C#/.NET 10. The repository already contains `PM5Control.Core` targeting `net10.0`. fileciteturn192file0
+The shared implementation is C#/.NET 10. The repository already contains `PM5Control.Core` targeting `net10.0`.
 
 This choice is deliberate:
 
@@ -81,11 +81,11 @@ Android is a later milestone. We will not claim complete code sharing until the 
 +------------------------------------------------------+
 ```
 
-The current Core source tree already separates `Connections`, `Devices`, `Diagnostics` and `Protocols`, providing the intended foundation. fileciteturn191file0
+The current Core source tree separates `Connections`, `Devices`, `Diagnostics` and `Protocols`, providing the intended foundation.
 
 ## Hardware model
 
-The project is specifically about a **Proxmark5-class device with a main ARM/FPGA/RF subsystem and an ESP32/BWM subsystem** as described by the current project specification. We must not assume every physical revision exposes every feature.
+The project is specifically about a **Proxmark5-class device with a main ARM/FPGA/RF subsystem and an ESP32/BWM subsystem**. We must not assume every physical revision exposes every feature.
 
 The following areas are tracked independently:
 
@@ -186,6 +186,17 @@ Proxmark5
 
 The transport layer returns structured data/errors rather than terminal text where possible.
 
+### Cancellation and device-side abort
+
+Cancellation has two distinct meanings and must not be conflated:
+
+1. **Local cancellation** — the Windows application stops waiting for a response.
+2. **Device-side abort** — the PM5 receives `CMD_BREAK_LOOP` and leaves a running firmware loop.
+
+Upstream PM5/BWM evidence shows that the wireless firmware path must poll its BWM receive path from `data_available()` and `data_available_fast()` so `CMD_BREAK_LOOP` can be observed over BLE/Wi-Fi. This is recorded in `docs/UPSTREAM_PM5_BWM_ABORT_2026-09-15.md`.
+
+The Core therefore models device-side abort as an optional `IProxmarkAbortTransport` capability. A caller cancellation may request that capability before propagating cancellation. A transport must only implement it when its exact wire path for PM3 forwarding is verified; the Control Center must never guess a BWM command wrapper.
+
 ## BWM framing and asynchronous events
 
 The current project documentation describes a binary BWM packet layer with request/response/broadcast concepts and CRC validation. Exact constants and command IDs must remain versioned because PM5/BWM software is evolving.
@@ -212,6 +223,9 @@ IProxmarkTransport
   WriteAsync()
   State
 
+IProxmarkAbortTransport
+  AbortCurrentOperationAsync()
+
 IProxmarkProtocol
   IdentifyAsync()
   GetCapabilitiesAsync()
@@ -227,7 +241,7 @@ IBwmProtocol
   SubscribeEvents()
 ```
 
-These are architectural concepts, not a requirement to freeze exact method signatures before real-device validation.
+`IProxmarkAbortTransport` is deliberately optional. USB/serial and transparent BWM forwarding are not assumed to share identical framing merely because they ultimately carry PM3 commands.
 
 ## Diagnostic result model
 
@@ -281,9 +295,10 @@ Minimum test layers:
 4. request/response correlation tests
 5. asynchronous event tests
 6. transport mock tests
-7. compatibility-rule tests
-8. golden-frame tests based on verified material
-9. real-device integration tests
+7. cancellation/abort contract tests
+8. compatibility-rule tests
+9. golden-frame tests based on verified material
+10. real-device integration tests
 
 Every report/test must clearly identify simulation versus physical hardware evidence.
 
