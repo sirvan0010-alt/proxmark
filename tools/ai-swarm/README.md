@@ -11,6 +11,19 @@ This directory contains the model-backed runtime and controlled implementation b
 5. scoped tests and draft PR
 6. human/release merge gate
 
+## Non-interactive CI contract
+
+`runner.py` is intentionally **non-interactive**:
+
+- no TTY / prompt_toolkit / confirm modes;
+- role, task file and context file are always CLI arguments;
+- result is always a JSON artifact;
+- suitable for GitHub Actions and Docker with stdin from `/dev/null`.
+
+Do **not** replace this path with an interactive agent CLI (confirm/yolo prompts) unless CI forces full non-interactive flags **and** a real smoke test proves no `Input is not a terminal` / abort path remains.
+
+See `docs/AI-SWARM-ARCHITECTURE.md` for autonomy levels and the Research Ledger lifecycle.
+
 ## Boundaries
 
 `runner.py` is an analysis agent. It receives a role, task contract and repository context, calls the configured model through the OpenAI Responses API, and writes an auditable JSON result. It does not mutate the repository and has no PM5 hardware transport.
@@ -31,6 +44,11 @@ Optional model configuration:
 ## Evidence boundary
 
 Source, documentation, simulator and CI evidence remain distinct from physical PM5 evidence. A successful AI run, build, test, or draft PR never establishes physical hardware verification.
+
+## Research Ledger
+
+Machine-readable state: `docs/RESEARCH-LEDGER.json`.  
+`RESEARCH_AGENT` owns completeness. Orchestrator must not close research with open mechanisms.
 
 ## Merge boundary
 
