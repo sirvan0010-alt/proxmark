@@ -4,7 +4,7 @@ using PM5Control.Core.Protocols.Pm3;
 
 namespace PM5Control.Core.Connections;
 
-public sealed class Pm3SerialTransport : IAsyncDisposable, IPm3ReadOnlyTransport
+public sealed class Pm3SerialTransport : IAsyncDisposable, IPm3ReadOnlyTransport, IProxmarkAbortTransport
 {
     private const int MaxUnmatchedResponses = 32;
     private const ushort CmdStatus = 0x0108;
@@ -41,6 +41,17 @@ public sealed class Pm3SerialTransport : IAsyncDisposable, IPm3ReadOnlyTransport
         port.Open();
         _port = port;
         return Task.CompletedTask;
+    }
+
+    public async Task AbortCurrentOperationAsync(CancellationToken cancellationToken = default)
+    {
+        if (!IsConnected)
+            throw new InvalidOperationException("PM3 serial transport is not connected.");
+
+        var port = _port!;
+        var request = Pm3NgFrame.EncodeCommand(Pm3CommandCode.BreakLoop);
+        await port.BaseStream.WriteAsync(request, cancellationToken).ConfigureAwait(false);
+        await port.BaseStream.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<Pm3NgExchange> SendReadOnlyAsync(ushort command, CancellationToken cancellationToken = default)
