@@ -5,6 +5,7 @@ using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Devices.Enumeration;
 using Windows.Security.Cryptography;
 using PM5Control.Core.Connections;
+using PM5Control.Core.Protocols.Bwm;
 using PM5Control.Core.Protocols.Pm3;
 
 namespace PM5Control.Desktop;
@@ -15,7 +16,7 @@ namespace PM5Control.Desktop;
 /// service 0xAE86 and data characteristic 0xAE88. The transport carries the
 /// normal PM3 NG byte stream unchanged; BLE is only the transport layer.
 /// </summary>
-internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport, IPm3ReadOnlyTransport
+internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport, IPm3ReadOnlyTransport, IProxmarkAbortTransport
 {
     public const ushort SppServiceUuid16 = 0xAE86;
     public const ushort SppCharacteristicUuid16 = 0xAE88;
@@ -143,6 +144,21 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport, IPm3Read
         return exchange.Response.RawFrame;
     }
 
+    /// <summary>
+    /// Abort a running PM3 operation through the verified BWM transparent-forward path.
+    /// BWM APP_CMD_SEND_FORWARD_DATA (5000) carries the raw PM3 NG CMD_BREAK_LOOP frame.
+    /// Upstream BWM firmware forwards that payload to the PM5 and returns forwarded
+    /// device data as a broadcast. This is not a guessed BWM-specific BREAK command.
+    /// </summary>
+    public Task AbortCurrentOperationAsync(CancellationToken cancellationToken = default)
+    {
+        var pm3BreakLoop = Pm3NgFrame.EncodeCommand(Pm3CommandCode.BreakLoop);
+        var bwmRequest = BwmFrameCodec.EncodeRequest(
+            (ushort)BwmCommandCode.SendForwardData,
+            pm3BreakLoop);
+        return WriteRawAsync(bwmRequest, cancellationToken);
+    }
+
     private async Task WriteChunkedAsync(byte[] data, CancellationToken cancellationToken)
     {
         var characteristic = _characteristic ?? throw new InvalidOperationException("BLE characteristic is unavailable.");
@@ -156,6 +172,28 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport, IPm3Read
             if (status != GattCommunicationStatus.Success) throw new IOException($"BLE write failed at offset {offset}/{data.Length}; status={status}.");
         }
     }
+
+    private async Task WriteRawAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken)
+    {
+        if (!IsConnected)
+            throw new InvalidOperationException("PM5 BLE transport is not connected.");
+        var characteristic = _characteristic ?? throw new InvalidOperationException("BLE characteristic is unavailable.");
+        await _writeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var status = await characteristic.WriteValueAsync(
+                CryptographicBuffer.CreateFromByteArray(data.ToArray()),
+                GattWriteOption.WriteWithoutResponse);
+            if (status != GattCommunicationStatus.Success)
+                throw new IOException($"BLE write failed; status={status}.");
+        }
+        finally
+        {
+            _writeGate.Release();
+        }
+    }
+
+    private readonly SemaphoreSlim _writeGate = new(1, 1);
 
     private void OnValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args)
     {
@@ -216,6 +254,7 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport, IPm3Read
     {
         await DisconnectAsync().ConfigureAwait(false);
         _rxSignal.Dispose();
+        _writeGate.Dispose();
     }
 }
 
