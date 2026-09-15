@@ -8,12 +8,6 @@ namespace PM5Control.Core.Connections;
 /// Response framing/correlation belongs to IPm3ReadOnlyTransport. The client
 /// deliberately does not attempt to decode the first byte returned by a
 /// generic transport or assume that one SendAsync call maps to one frame.
-///
-/// The transport implementation is responsible for consuming unsolicited
-/// debug/broadcast frames, correlating the expected command and enforcing its
-/// unmatched-response limit. This keeps the read-only client safe to use with
-/// the existing PM3 serial implementation without inventing a second framing
-/// protocol.
 /// </summary>
 public sealed class Pm3ReadOnlyClient
 {
@@ -32,11 +26,9 @@ public sealed class Pm3ReadOnlyClient
 
     /// <summary>
     /// Executes one allow-listed PM3-NG read-only command.
-    ///
-    /// Serialization is intentional: a physical PM3 command channel is a
-    /// single ordered stream and concurrent requests can otherwise interleave.
-    /// The timeout token is local to this operation, so cancellation by the
-    /// caller remains distinguishable from a transport-level timeout.
+    /// If the caller cancels while the device is busy, an abort-capable
+    /// transport is given an opportunity to deliver CMD_BREAK_LOOP before the
+    /// cancellation is propagated. This mirrors the upstream PM5/BWM contract.
     /// </summary>
     public async Task<Pm3NgExchange> ExecuteAsync(
         ushort command,
@@ -57,10 +49,28 @@ public sealed class Pm3ReadOnlyClient
 
             try
             {
-                // IPm3ReadOnlyTransport already owns the complete framed
-                // exchange, including debug/unmatched response handling.
                 return await _transport.SendReadOnlyAsync(command, timeout.Token)
                     .ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                if (_transport is IProxmarkAbortTransport abortTransport)
+                {
+                    try
+                    {
+                        // Do not reuse the cancelled token: the abort itself
+                        // must have a chance to reach the device.
+                        using var abortTimeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(750));
+                        await abortTransport.AbortCurrentOperationAsync(abortTimeout.Token).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // Cancellation remains authoritative. The transport
+                        // can report abort failure through its own diagnostics.
+                    }
+                }
+
+                throw;
             }
             catch (OperationCanceledException) when (
                 !cancellationToken.IsCancellationRequested && timeout.IsCancellationRequested)
