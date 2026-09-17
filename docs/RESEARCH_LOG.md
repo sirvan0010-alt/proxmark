@@ -127,7 +127,7 @@ This is the chronological evidence log for the PM5 Control Center.
 
 **Hardware identity:** None for our project.
 
-**Test:** Deterministic codec test constructs the PM3 NG `CMD_BREAK_LOOP` frame and wraps it as BWM request command 5000. Expected bytes: `7CC788130A00504D3361008018013361D0A9`. The resulting frame decodes back to command 5000 with the identical PM3 payload.
+**Test:** Deterministic codec test constructs the PM3 NG `CMD_BREAK_LOOP` frame and wraps it as BWM request command 5000. Current little-endian PM3 framing produces BWM bytes `7CC788130A00504D3361008018016133E468`. The resulting frame decodes back to command 5000 with the identical PM3 payload.
 
 **Result:** The previously unresolved BWM transparent-forward wire path is now source-verified. Windows BLE abort support can therefore use `BwmFrameCodec.EncodeRequest(5000, Pm3NgFrame.EncodeCommand(0x0118))` without inventing a BWM BREAK command. Physical end-to-end PM5+BWM BLE abort remains unverified by this project.
 
