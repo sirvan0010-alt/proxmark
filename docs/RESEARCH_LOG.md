@@ -9,6 +9,7 @@ This is the chronological evidence log for the PM5 Control Center.
 - Record the exact PM5 hardware/firmware identity for hardware observations when available.
 - Distinguish PM3-derived knowledge from PM5-verified knowledge.
 - When two sources disagree, preserve both observations and record the mismatch.
+- Record relevant upstream transport/BWM changes even when they do not yet change PM5 capability claims.
 
 ## Entry template
 
@@ -31,6 +32,46 @@ This is the chronological evidence log for the PM5 Control Center.
 **Result:**
 
 **Next action:**
+
+## 2026-09-17 — Upstream USB receive robustness fix
+
+**Question:** Does the current upstream transport contain a receive-side fix relevant to PM5 Control Center reliability?
+
+**Observation:** `RfidResearchGroup/Proxmark3` fixed USB receive stalling when a transfer ends with a zero-length OUT packet and fixed handling of a command already buffered behind another packet. The change applies to both AT91 and AT32 USB CDC paths and deliberately leaves frame parsing unchanged.
+
+**Evidence level:** DOCUMENTED / SOURCE_VERIFIED
+
+**Source:** `RfidResearchGroup/Proxmark3`, upstream PR #3628 / cherry-pick
+
+**Upstream commit/tag:** `71b558d6be9eac062350f5533b1c39838dcef9a3` (2026-09-16)
+
+**Hardware identity:** None for our project.
+
+**Test:** Upstream reports the issue as an occasional lost packet after a burst of `CMD_HF_MIFARE_EML_MEMSET` chunks. The implementation explicitly checks already-buffered NG data, acknowledges terminating zero-length packets, and rearms reception.
+
+**Result:** This is a transport-layer robustness change relevant to our USB session state machine. It does not establish new PM5-specific capability and does not change the PM3 NG frame format.
+
+**Next action:** Add regression scenarios to the PM5 Control Center simulator/core for endpoint-boundary transfer + ZLP, multiple commands in one burst, and already-buffered command processing. Preserve transport/parser distinction in diagnostics.
+
+## 2026-09-17 — BWM/ESP32 BLE bulk-transfer baseline unchanged
+
+**Question:** Has the official BWM/ESP32 repository added another BLE transport change since the previous PM5 snapshot?
+
+**Observation:** The latest located BWM/ESP32 change remains the BLE bulk-transfer drop fix. No newer BWM/ESP32 commit was located in the current monitoring pass.
+
+**Evidence level:** DOCUMENTED / SOURCE_VERIFIED
+
+**Source:** `RfidResearchGroup/Proxmark5_BWM_esp32`
+
+**Upstream commit/tag:** `4818511a2b179c61f80f54b5f825428cba51deb8` (2026-09-14)
+
+**Hardware identity:** None for our project.
+
+**Test:** Commit history reviewed for current BWM/ESP32 activity; latest relevant change is the BLE bulk-transfer drop fix.
+
+**Result:** The BLE bulk-transfer fix remains the current BWM transport baseline. It is not evidence that realtime LF streaming over BLE/Wi-Fi is fully supported.
+
+**Next action:** Keep BLE/BWM burst-loss and backpressure tests in the simulator; monitor for new BWM/ESP32 commits affecting framing, buffers, notification scheduling, Wi-Fi/TCP forwarding, OTA or diagnostics.
 
 ## 2026-09-15 — PM5 BWM wireless abort path
 
@@ -85,3 +126,5 @@ This is the chronological evidence log for the PM5 Control Center.
 - Power/battery telemetry exposed by the actual hardware.
 - Verified firmware backup/extraction mechanisms.
 - Compatibility differences between PM3-family devices and PM5.
+- Upstream USB receive robustness and endpoint-boundary behavior.
+- Continuous monitoring of RfidResearchGroup/Proxmark5_BWM_esp32 for BLE/Wi-Fi/BWM firmware changes.
