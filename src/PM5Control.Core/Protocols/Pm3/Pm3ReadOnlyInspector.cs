@@ -7,9 +7,9 @@ namespace PM5Control.Core.Protocols.Pm3;
 public sealed record Pm3ReadOnlyIdentity(string Hardware, string ArmFirmware, string FpgaFirmware, string Details);
 
 /// <summary>
-/// Decoded CMD_CAPABILITIES response. The v6 wire layout is the current upstream
-/// PM3/RRG capabilities_t layout: 1 byte version, uint32 baudrate, uint32 bigbuf
-/// size and four bytes of bool bit-fields (25 defined flags + padding).
+/// Decoded CMD_CAPABILITIES response using the upstream append-only capabilities_t layout.
+/// Versions 6 through 11 share the first 13 bytes; v9 appends max_cmd_data_size and
+/// v11 appends em_size/em_allocated. Unknown versions remain UNKNOWN rather than guessed.
 /// </summary>
 public sealed record Pm3CapabilitiesReport(
     int SchemaVersion,
@@ -20,7 +20,14 @@ public sealed record Pm3CapabilitiesReport(
     uint BaudRate,
     uint BigBufferSize,
     IReadOnlyList<string> EnabledFeatures,
-    byte[] RawPayload);
+    byte[] RawPayload,
+    bool IsPm5 = false,
+    bool IsPm5StandardAntenna = false,
+    bool HardwareFpgaFlash = false,
+    bool HardwareI2cEeprom = false,
+    ushort MaxCommandDataSize = 0,
+    ushort EmulatorSize = 0,
+    bool EmulatorAllocated = false);
 
 public sealed record Pm3RawDiagnostic(
     string CommandName,
@@ -89,23 +96,26 @@ public static class Pm3ReadOnlyInspector
         var identity = await QueryVersionAsync(transport, cancellationToken).ConfigureAwait(false);
         var capabilities = await QueryCapabilitiesAsync(transport, cancellationToken).ConfigureAwait(false);
         var hardware = capabilities.IsKnownSchema
-            ? $"PM3-family ARM endpoint verified; capabilities v{capabilities.SchemaVersion}; USB={(capabilities.ViaUsb ? "yes" : "no")}; RDV4={(capabilities.IsRdv4 ? "yes" : "no")}."
+            ? $"PM3-family ARM endpoint verified; capabilities v{capabilities.SchemaVersion}; USB={(capabilities.ViaUsb ? "yes" : "no")}; RDV4={(capabilities.IsRdv4 ? "yes" : "no")}; PM5={(capabilities.IsPm5 ? "yes" : "no")}."
             : "PM3-family ARM endpoint verified - CMD_CAPABILITIES schema version not recognised by this build.";
         return (identity with { Hardware = hardware }, capabilities);
     }
 
     /// <summary>
-    /// Decodes the upstream CAPABILITIES_VERSION 6 layout from pm3_cmd.h.
-    /// Wire layout for the real PM5 response is 13 bytes:
-    /// [version][baudrate:u32 LE][bigbuf_size:u32 LE][flags0..flags3].
-    /// The bool bit-fields are allocated in four one-byte units by the ARM toolchain.
-    /// Defined flags occupy the first 25 bits; the remaining bits are padding.
+    /// Decodes the upstream append-only capabilities_t layout.
+    /// Versions 6..8 are the original 13-byte layout. Version 9 appends a uint16
+    /// max_cmd_data_size. Version 11 appends uint16 em_size and bool em_allocated.
+    /// Versions 10 and 11 retain the preceding fields. Unknown versions are rejected.
     /// </summary>
     public static Pm3CapabilitiesReport DecodeCapabilities(byte[] payload)
     {
         var version = payload.Length == 0 ? -1 : payload[0];
-        if (version != 6 || payload.Length < 13)
-            return new Pm3CapabilitiesReport(version, false, false, false, false, 0, 0, Array.Empty<string>(), payload);
+        if (version < 6 || version > 11)
+            return UnknownCapabilities(version, payload);
+
+        var minimumLength = version >= 11 ? 18 : version >= 9 ? 15 : 13;
+        if (payload.Length < minimumLength)
+            return UnknownCapabilities(version, payload);
 
         var baudRate = BinaryPrimitives.ReadUInt32LittleEndian(payload.AsSpan(1, 4));
         var bigBufferSize = BinaryPrimitives.ReadUInt32LittleEndian(payload.AsSpan(5, 4));
@@ -132,19 +142,39 @@ public static class Pm3ReadOnlyInspector
         AddIf(features, payload[10], 6, "ISO14443-A");
         AddIf(features, payload[10], 7, "ISO14443-B");
 
-        // flags2: ISO15693, FeliCa, LEGIC, iCLASS, NFC barcode, LCD,
-        // hardware flash available, hardware smartcard available
+        // flags2: ISO15693, FeliCa, LEGIC, iCLASS, SEOS, NFC barcode, LCD, hardware flash
         AddIf(features, payload[11], 0, "ISO15693");
         AddIf(features, payload[11], 1, "FeliCa");
         AddIf(features, payload[11], 2, "LEGIC");
         AddIf(features, payload[11], 3, "iCLASS");
-        AddIf(features, payload[11], 4, "NFC barcode");
-        AddIf(features, payload[11], 5, "LCD");
-        AddIf(features, payload[11], 6, "Hardware flash");
-        AddIf(features, payload[11], 7, "Hardware smartcard");
+        AddIf(features, payload[11], 4, "SEOS");
+        AddIf(features, payload[11], 5, "NFC barcode");
+        AddIf(features, payload[11], 6, "LCD");
+        AddIf(features, payload[11], 7, "Hardware flash");
 
-        // flags3: is_rdv4 is the first bit; remaining bits are currently undefined/padding.
-        var isRdv4 = Has(payload[12], 0);
+        // flags3: hardware smartcard, RDV4, FPGA flash, I2C EEPROM, PM5, PM5 standard antenna
+        AddIf(features, payload[12], 0, "Hardware smartcard");
+        var isRdv4 = Has(payload[12], 1);
+        var hardwareFpgaFlash = Has(payload[12], 2);
+        var hardwareI2cEeprom = Has(payload[12], 3);
+        var isPm5 = Has(payload[12], 4);
+        var isPm5StandardAntenna = Has(payload[12], 5);
+        if (isRdv4) features.Add("RDV4 hardware");
+        if (hardwareFpgaFlash) features.Add("FPGA flash");
+        if (hardwareI2cEeprom) features.Add("I2C EEPROM");
+        if (isPm5) features.Add("PM5 hardware");
+        if (isPm5StandardAntenna) features.Add("PM5 standard antenna");
+
+        ushort maxCommandDataSize = 0;
+        ushort emulatorSize = 0;
+        var emulatorAllocated = false;
+        if (version >= 9)
+            maxCommandDataSize = BinaryPrimitives.ReadUInt16LittleEndian(payload.AsSpan(13, 2));
+        if (version >= 11)
+        {
+            emulatorSize = BinaryPrimitives.ReadUInt16LittleEndian(payload.AsSpan(15, 2));
+            emulatorAllocated = Has(payload[17], 0);
+        }
 
         return new Pm3CapabilitiesReport(
             version,
@@ -155,8 +185,18 @@ public static class Pm3ReadOnlyInspector
             baudRate,
             bigBufferSize,
             features,
-            payload);
+            payload,
+            isPm5,
+            isPm5StandardAntenna,
+            hardwareFpgaFlash,
+            hardwareI2cEeprom,
+            maxCommandDataSize,
+            emulatorSize,
+            emulatorAllocated);
     }
+
+    private static Pm3CapabilitiesReport UnknownCapabilities(int version, byte[] payload)
+        => new(version, false, false, false, false, 0, 0, Array.Empty<string>(), payload);
 
     private static bool Has(byte value, int bit) => (value & (1 << bit)) != 0;
 
