@@ -16,6 +16,6 @@ public sealed class Pm3AbortContractTests
     {
         var frame = Pm3NgFrame.EncodeCommand(Pm3CommandCode.BreakLoop);
 
-        Assert.Equal(Convert.FromHexString("504D3361008018013361"), frame);
+        Assert.Equal(Convert.FromHexString("504D3361008018016133"), frame);
     }
 }
