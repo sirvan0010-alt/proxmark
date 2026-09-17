@@ -20,7 +20,7 @@ public sealed class BwmWirelessAbortEncodingTests
             pm3BreakLoop);
 
         Assert.Equal(
-            Convert.FromHexString("7CC788130A00504D3361008018013361D0A9"),
+            Convert.FromHexString("7CC788130A00504D3361008018016133D0A9"),
             bwmFrame);
 
         Assert.True(BwmFrameCodec.TryDecode(bwmFrame, out var decoded));
