@@ -33,6 +33,26 @@ This is the chronological evidence log for the PM5 Control Center.
 
 **Next action:**
 
+## 2026-09-17 — Upstream CMD_CAPABILITIES schema correction
+
+**Question:** Does the current upstream capabilities schema match the decoder previously implemented in the Control Center?
+
+**Observation:** Current upstream `RfidResearchGroup/Proxmark3/include/pm3_cmd.h` defines `CAPABILITIES_VERSION 11`. The `capabilities_t` layout is append-only: the original 13-byte core is followed by `max_cmd_data_size` from v9 and `em_size`/`em_allocated` from v11. The fourth flag byte now also contains `is_pm5`, `is_pm5_std_ant`, FPGA-flash and I2C-EEPROM indicators. The previous Control Center decoder only accepted v6 and had incorrect flag positions for newer hardware fields.
+
+**Evidence level:** DOCUMENTED / SOURCE_VERIFIED
+
+**Source:** `RfidResearchGroup/Proxmark3`, `include/pm3_cmd.h`
+
+**Upstream commit/tag:** Current upstream master inspected 2026-09-17; exact source revision should be recorded again when a PM5 hardware verification is performed.
+
+**Hardware identity:** None for our project.
+
+**Test:** Added a v11 fixture covering PM5/RDV4 flags, baud rate, BigBuf, `max_cmd_data_size`, emulator size and allocation state. Unknown/truncated schemas remain UNKNOWN.
+
+**Result:** The decoder now accepts documented schema versions 6 through 11 and preserves the evidence boundary for versions outside that range. This is a protocol-model correction, not proof of any particular physical PM5 response.
+
+**Next action:** Validate the actual PM5 `CMD_CAPABILITIES` response over USB and compare its raw payload with the v11 upstream layout before promoting any hardware-specific identity to DETECTED.
+
 ## 2026-09-17 — Upstream USB receive robustness fix
 
 **Question:** Does the current upstream transport contain a receive-side fix relevant to PM5 Control Center reliability?
@@ -128,3 +148,4 @@ This is the chronological evidence log for the PM5 Control Center.
 - Compatibility differences between PM3-family devices and PM5.
 - Upstream USB receive robustness and endpoint-boundary behavior.
 - Continuous monitoring of RfidResearchGroup/Proxmark5_BWM_esp32 for BLE/Wi-Fi/BWM firmware changes.
+- Current upstream `CMD_CAPABILITIES` schema v11 and PM5-specific capability bits.
