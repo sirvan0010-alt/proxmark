@@ -38,6 +38,37 @@ public sealed class BwmPm3ForwardedResponseParserTests
     }
 
     [Fact]
+    public void Full4064BytePm3ResponseCanBeFragmentedAcrossBwm2048ByteChunks()
+    {
+        var pm3 = MakeResponse(Pm3CommandCode.Status, Enumerable.Repeat((byte)0x5A, Pm3NgFrame.MaxPayload).ToArray());
+        var parser = new BwmPm3ForwardedResponseParser();
+        Pm3NgResponse? received = null;
+        parser.ResponseReceived += response => received = response;
+
+        parser.Append(new BwmFrame(BwmFrameKind.Broadcast, (ushort)BwmBroadcastType.DataForward, pm3[..2048]));
+        parser.Append(new BwmFrame(BwmFrameKind.Broadcast, (ushort)BwmBroadcastType.DataForward, pm3[2048..4096]));
+        parser.Append(new BwmFrame(BwmFrameKind.Broadcast, (ushort)BwmBroadcastType.DataForward, pm3[4096..]));
+
+        Assert.NotNull(received);
+        Assert.Equal(Pm3NgFrame.MaxPayload, received!.Payload.Length);
+        Assert.All(received.Payload, value => Assert.Equal((byte)0x5A, value));
+    }
+
+    [Fact]
+    public void OversizedSingleBwmForwardChunkIsRejected()
+    {
+        var parser = new BwmPm3ForwardedResponseParser();
+        var count = 0;
+        parser.ResponseReceived += _ => count++;
+        var oversized = new BwmFrame(BwmFrameKind.Broadcast, (ushort)BwmBroadcastType.DataForward,
+            new byte[Pm3NgFrame.FpcMaxPayload + 1]);
+
+        parser.Append(oversized);
+
+        Assert.Equal(0, count);
+    }
+
+    [Fact]
     public void MultiplePm3ResponsesInOneBwmPayloadAreDecoded()
     {
         var first = MakeResponse(Pm3CommandCode.Version, new byte[] { 1 });
