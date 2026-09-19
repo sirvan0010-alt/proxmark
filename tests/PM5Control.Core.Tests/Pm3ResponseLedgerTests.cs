@@ -46,6 +46,7 @@ public sealed class Pm3ResponseLedgerTests
         var response = new Pm3NgResponse(Pm3CommandCode.Version, 0, 0, Array.Empty<byte>(), Array.Empty<byte>());
         var entry = ledger.Observe(response, sent.AddSeconds(2));
 
-        Assert.Equal(Pm3ResponseDisposition.Unsolicited, entry.Disposition);
+        Assert.Equal(Pm3ResponseDisposition.Late, entry.Disposition);
+        Assert.Equal(TimeSpan.FromSeconds(2), entry.Age);
     }
 }
