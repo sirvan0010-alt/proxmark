@@ -21,6 +21,7 @@ public sealed class Pm3ResponseLedger
 {
     private sealed record Pending(ushort Command, DateTimeOffset SentAt);
     private readonly Queue<Pending> _pending = new();
+    private readonly Queue<Pending> _expired = new();
     private readonly List<Pm3ResponseLedgerEntry> _entries = new();
 
     public IReadOnlyList<Pm3ResponseLedgerEntry> Entries => _entries;
@@ -37,7 +38,18 @@ public sealed class Pm3ResponseLedger
 
         if (pending is null)
         {
-            disposition = Pm3ResponseDisposition.Unsolicited;
+            var expired = _expired.FirstOrDefault(x => x.Command == response.Command);
+            if (expired is not null)
+            {
+                disposition = Pm3ResponseDisposition.Late;
+                sentAt = expired.SentAt;
+                age = receivedAt - expired.SentAt;
+                _expired = RemoveFirst(_expired, expired);
+            }
+            else
+            {
+                disposition = Pm3ResponseDisposition.Unsolicited;
+            }
         }
         else if (pending.Command == response.Command)
         {
@@ -70,8 +82,25 @@ public sealed class Pm3ResponseLedger
         }
 
         var pending = _pending.Dequeue();
+        _expired.Enqueue(pending);
         expectedCommand = pending.Command;
         sentAt = pending.SentAt;
         return true;
+    }
+
+    private static Queue<Pending> RemoveFirst(Queue<Pending> source, Pending target)
+    {
+        var result = new Queue<Pending>(source.Count);
+        var removed = false;
+        foreach (var item in source)
+        {
+            if (!removed && ReferenceEquals(item, target))
+            {
+                removed = true;
+                continue;
+            }
+            result.Enqueue(item);
+        }
+        return result;
     }
 }
