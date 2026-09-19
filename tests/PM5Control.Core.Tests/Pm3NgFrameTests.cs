@@ -70,6 +70,27 @@ public sealed class Pm3NgFrameTests
     }
 
     [Fact]
+    public void EncodeCommand_AcceptsFullPm5Payload()
+    {
+        var payload = Enumerable.Repeat((byte)0xA5, Pm3NgFrame.MaxPayload).ToArray();
+
+        var frame = Pm3NgFrame.EncodeCommand(0x1234, payload);
+
+        Assert.Equal(Pm3NgFrame.CommandHeaderSize + Pm3NgFrame.MaxPayload + Pm3NgFrame.PostambleSize, frame.Length);
+        Assert.Equal((ushort)(0x8000 | Pm3NgFrame.MaxPayload),
+            BinaryPrimitives.ReadUInt16LittleEndian(frame.AsSpan(4, 2)));
+    }
+
+    [Fact]
+    public void EncodeCommand_RejectsPayloadAbovePm5Limit()
+    {
+        var payload = Enumerable.Repeat((byte)0xA5, Pm3NgFrame.MaxPayload + 1).ToArray();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            Pm3NgFrame.EncodeCommand(0x1234, payload));
+    }
+
+    [Fact]
     public void DecodeResponse_AcceptsUsbPostamble()
     {
         var payload = new byte[] { 1, 2, 3 };
