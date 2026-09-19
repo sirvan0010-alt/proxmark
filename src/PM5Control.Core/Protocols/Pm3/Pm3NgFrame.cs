@@ -19,7 +19,14 @@ public static class Pm3NgFrame
     public const int CommandHeaderSize = 8;
     public const int ResponseHeaderSize = 10;
     public const int PostambleSize = 2;
-    public const int MaxPayload = 512;
+
+    // Upstream RRG PM5 definition:
+    // PM3_CMD_DATA_SIZE = 4064 for PM5 firmware and client.
+    // OLD frames remain pinned at 512 bytes.
+    // BWM/FPC forwarding currently caps forwarded payloads at 2048 bytes.
+    public const int MaxPayload = 4064;
+    public const int LegacyMaxPayload = 512;
+    public const int FpcMaxPayload = 2048;
 
     public static byte[] EncodeCommand(ushort command, ReadOnlySpan<byte> payload = default)
     {
