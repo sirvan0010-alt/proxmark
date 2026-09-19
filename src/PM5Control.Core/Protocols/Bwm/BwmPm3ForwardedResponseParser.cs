@@ -24,6 +24,12 @@ public sealed class BwmPm3ForwardedResponseParser
             frame.CommandId != (ushort)BwmBroadcastType.DataForward)
             return;
 
+        // The PM3 data path behind BWM/FPC is capped at 2048 bytes per
+        // forwarded BWM payload. A larger PM3 NG response is therefore
+        // expected to arrive fragmented across multiple DATA_FORWARD frames.
+        if (!Pm3TransportLimits.Fits(Pm3TransportKind.BwmFpc, frame.Payload.Length))
+            return;
+
         _pm3.Append(frame.Payload);
     }
 }
