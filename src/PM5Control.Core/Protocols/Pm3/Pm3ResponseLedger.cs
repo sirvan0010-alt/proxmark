@@ -44,7 +44,7 @@ public sealed class Pm3ResponseLedger
                 disposition = Pm3ResponseDisposition.Late;
                 sentAt = expired.SentAt;
                 age = receivedAt - expired.SentAt;
-                _expired = RemoveFirst(_expired, expired);
+                RemoveExpired(expired);
             }
             else
             {
@@ -88,19 +88,14 @@ public sealed class Pm3ResponseLedger
         return true;
     }
 
-    private static Queue<Pending> RemoveFirst(Queue<Pending> source, Pending target)
+    private void RemoveExpired(Pending target)
     {
-        var result = new Queue<Pending>(source.Count);
-        var removed = false;
-        foreach (var item in source)
+        var count = _expired.Count;
+        for (var i = 0; i < count; i++)
         {
-            if (!removed && ReferenceEquals(item, target))
-            {
-                removed = true;
-                continue;
-            }
-            result.Enqueue(item);
+            var item = _expired.Dequeue();
+            if (!ReferenceEquals(item, target))
+                _expired.Enqueue(item);
         }
-        return result;
     }
 }
