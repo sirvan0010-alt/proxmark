@@ -73,7 +73,7 @@ Android is a later milestone. We will not claim complete code sharing until the 
                              |
 +----------------------------v-------------------------+
 | Transport                                              |
-| USB | serial where applicable | BLE | Wi-Fi/TCP       |
+| USB | serial where applicable | BLE | Wi-Fi/TCP | CEP/Flipper |
 +----------------------------+-------------------------+
                              |
 +----------------------------v-------------------------+
@@ -168,7 +168,7 @@ Do not create a single giant Proxmark class.
 
 Use adapters/interfaces so different generations can be isolated. A PM3-compatible mechanism can be reused where appropriate, while PM5-specific behavior remains explicit.
 
-The BWM/ESP32 interface is a separate adapter because its lifecycle, networking and firmware are distinct from the main RFID/ARM subsystem.
+The BWM/ESP32 interface is a separate adapter because its lifecycle, networking and firmware are distinct from the main RFID/ARM subsystem. CEP is another distinct transport adapter because it terminates at a Flipper Zero rather than directly at the PC.
 
 ## Transport abstraction
 
@@ -186,6 +186,10 @@ Proxmark5
 
 The transport layer returns structured data/errors rather than terminal text where possible.
 
+### CEP transport boundary
+
+CEP is a PM5↔Flipper Zero Type-C Extended Port path. Upstream documents a bounded UART handshake (`iamf0rupm5` → `yes`) and then length-prefixed PM3 NG frames over SPI. The Core models these constants and framing, but the project must not expose CEP as a direct PC transport until a host/Flipper bridge is verified.
+
 ### Cancellation and device-side abort
 
 Cancellation has two distinct meanings and must not be conflated:
@@ -199,7 +203,7 @@ The Core therefore models device-side abort as an optional `IProxmarkAbortTransp
 
 ## BWM framing and asynchronous events
 
-The current project documentation describes a binary BWM packet layer with request/response/broadcast concepts and CRC validation. Exact constants and command IDs must remain versioned because PM5/BWM software is evolving.
+The current project documentation describes a binary BWM packet layer with request/response/broadcast concepts and CRC validation. PM5 capability schema v13 must be treated as the source of truth for whether BWM and CEP are compiled into the ARM firmware. Exact constants and command IDs must remain versioned because PM5/BWM software is evolving.
 
 The communication engine must support both:
 
