@@ -60,6 +60,19 @@ Task C — find next blocker
 Hardware verification when required
 ```
 
+## Upstream synchronization rule
+
+When upstream changes PM5 capability fields, transport framing, BWM flow control or CEP, the AI must update the following together:
+
+1. upstream evidence snapshot;
+2. compatibility registry;
+3. protocol/model code;
+4. unit-test fixtures;
+5. simulator contract;
+6. AI_CONTEXT and roadmap if the implementation boundary changes.
+
+The AI must first verify the exact upstream commit/file. A previous assistant summary is not sufficient evidence.
+
 ## Simulator progression
 
 The simulator should progress through transparent tiers:
@@ -68,6 +81,9 @@ The simulator should progress through transparent tiers:
 
 - valid request/response framing;
 - known read-only command fixtures;
+- PM5 capabilities schema v13 fixture;
+- BWM compiled/not-compiled capability variants;
+- CEP attached/not-attached capability variants;
 - deterministic payload encoding;
 - CRC validation;
 - command/response matching.
@@ -87,7 +103,9 @@ The simulator should progress through transparent tiers:
 - timeouts;
 - connection loss;
 - unsupported commands;
-- cancellation.
+- cancellation;
+- device-side abort;
+- CEP length-prefixed NG framing.
 
 Passing a simulator test proves a property of the client against the model. It does not prove the physical PM5 behaves identically.
 
