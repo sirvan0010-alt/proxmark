@@ -1,7 +1,28 @@
 {
   "schema_version": 2,
   "purpose": "Evidence-backed firmware compatibility registry",
-  "entries": [],
+  "entries": [
+    {
+      "hardware_family": "PM5",
+      "firmware_component": "ARM",
+      "firmware_version": "upstream master / schema v13",
+      "source_repository": "RfidResearchGroup/proxmark3",
+      "source_commit": "12296f4afbef598771a2412b3e42b6d0b3051504",
+      "source_date": "2026-09-27",
+      "compatibility_status": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
+      "notes": "Current capability struct includes compiled_with_bwm and compiled_with_cep. Do not treat this as a recommendation to flash."
+    },
+    {
+      "hardware_family": "PM5",
+      "firmware_component": "BWM/ESP32",
+      "firmware_version": "4818511 baseline",
+      "source_repository": "RfidResearchGroup/Proxmark5_BWM_esp32",
+      "source_commit": "4818511a2b179c61f80f54b5f825428cba51deb8",
+      "source_date": "2026-09-27",
+      "compatibility_status": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
+      "notes": "Latest merged BWM repository commit observed."
+    }
+  ],
   "selection_fields": [
     "hardware_family",
     "hardware_revision",
@@ -24,6 +45,8 @@
     "Do not populate firmware versions from guesses or PM3 assumptions.",
     "Record exact firmware identifiers and evidence when observed or sourced from a reliable upstream reference.",
     "Compatibility status and detected device state are separate concepts.",
-    "A PM3 firmware package must never be recommended for PM5 solely because the repositories share protocol code."
-  ]
+    "A PM3 firmware package must never be recommended for PM5 solely because the repositories share protocol code.",
+    "2026-09-27: upstream PM5 capabilities schema is v13. CEP is default-on in PM5 and BWM capability is explicitly represented."
+  ],
+  "lastUpdated": "2026-09-27"
 }
