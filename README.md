@@ -99,7 +99,7 @@ The first desktop build provides:
 - diagnostic log;
 - no firmware flashing, reset or destructive hardware operation.
 
-GitHub Actions publishes a self-contained, single-file `win-x64` Windows package as the `PM5Control-Windows` artifact after a successful Core test run. The desktop UI deliberately does not pretend that a COM port alone proves PM5 protocol compatibility.
+GitHub Actions publishes a self-contained, single-file `win-x64` Windows package as the `PM5Control-Windows` artifact after a successful Core test run. The desktop UI deliberately does not pretend that a COM port alone proves PM5 protocol compatibility. CEP is modeled as a PM5↔Flipper transport, not as a direct PC transport.
 
 ## CLI command reference
 
@@ -153,6 +153,7 @@ PM5 Control Center
         |      +-- Serial/transport as applicable
         |      +-- Wi-Fi/TCP
         |      +-- Bluetooth/BLE
+        |      +-- CEP / Flipper Zero
         |
         +-- Protocol Abstraction
                +-- Legacy PM3-compatible protocol
@@ -267,8 +268,23 @@ but never enables user-entered commands. `CMD_CAPABILITIES` is decoded only for
 the documented upstream `capabilities_t` schema version 8; unknown schema
 versions are retained as raw data and reported as unknown rather than guessed.
 
-The desktop executable shell is now in the repository and CI is configured to produce a self-contained Windows package. The physical PM5 session remains read-only: identify USB/serial transport, inspect device/firmware versions, determine available PM5/BWM interfaces, and preserve the original state before any firmware update.
+The desktop executable shell is now in the repository and CI is configured to produce a self-contained Windows package. The physical PM5 session remains read-only: identify USB/serial transport, inspect device/firmware versions, determine available PM5/BWM/CEP interfaces, and preserve the original state before any firmware update.
 
 ## Project principle
 
 **First make the device observable and trustworthy. Then make it easy to control.**
+
+
+## Upstream baseline — 2026-09-27
+
+The current integration baseline tracks the upstream RfidResearchGroup/proxmark3 changes through 2026-09-27. Important PM5-specific changes are:
+
+- CAPABILITIES_VERSION=13, with compiled_with_bwm (v12) and compiled_with_cep (v13);
+- CEP is default-on for PM5, with SKIP_CEP=1 as the opt-out;
+- CEP provides a PM5↔Flipper Zero transport using a bounded UART handshake followed by length-prefixed PM3 NG frames over SPI;
+- BWM capability is explicitly reported and BWM commands are gated by capability;
+- BWM abort polling works over BLE/Wi-Fi;
+- PM5/BWM flow control is byte-window based and tied to the ESP UART receive ring;
+- BWM power-save, Wi-Fi power mode, BLE settings and auto-off controls are now represented upstream.
+
+These source-level facts do not automatically mean that every function is verified on the physical PM5 owned by the project. See docs/UPSTREAM_UPDATE_2026-09-27.md for the evidence boundary.
