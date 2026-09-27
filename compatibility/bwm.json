@@ -1,6 +1,6 @@
 {
   "schemaVersion": 4,
-  "lastChecked": "2026-09-14",
+  "lastChecked": "2026-09-27",
   "component": "PM5 BWM / ESP32 subsystem",
   "status": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
   "upstream": {
@@ -9,11 +9,17 @@
     "commit": "4818511a2b179c61f80f54b5f825428cba51deb8",
     "researchDate": "2026-09-14",
     "previousBaseline": "e0c4982800eb7d1ca16045631f3460f9f176427c",
-    "latestChange": "BLE notification retry delay reduced from 100 ms to 10 ms for no-memory and send-failure retry paths; UART RX buffer remains 4096 bytes",
+    "latestChange": "No new BWM repository commit since 4818511; main Proxmark3 upstream now adds explicit BWM capability gating, BLE settings, byte-window flow control, wireless abort polling, Wi-Fi/PM5/BWM power-save and auto-off controls.",
     "ciStatus": "NOT_YET_RECORDED_FOR_THIS_EXACT_COMMIT",
     "previousCiStatus": "SUCCESS",
     "previousCiCommit": "e0c4982800eb7d1ca16045631f3460f9f176427c",
-    "ciMeaning": "CI build/package success is evidence of firmware buildability only; it is not physical hardware verification."
+    "ciMeaning": "CI build/package success is evidence of firmware buildability only; it is not physical hardware verification.",
+    "mainProxmarkCommit": "381e1ae2fc3b41bc095e6dbd56be6bc49390d314",
+    "capabilitiesVersion": 13,
+    "capabilityFlags": {
+      "bwmVersion": 12,
+      "cepVersion": 13
+    }
   },
   "deviceModel": {
     "value": "0xDA10",
@@ -26,7 +32,8 @@
     "uartRxBufferBytes": 4096,
     "bleRetryDelayMs": 10,
     "confidence": "SOURCE_REPORTED",
-    "source": "RfidResearchGroup/Proxmark5_BWM_esp32 DEV.md and commit 4818511a2b179c61f80f54b5f825428cba51deb8"
+    "source": "RfidResearchGroup/Proxmark5_BWM_esp32 DEV.md and commit 4818511a2b179c61f80f54b5f825428cba51deb8",
+    "flowControl": "PM5 upstream byte-window flow control is now tied to the ESP UART receive ring; physical end-to-end verification remains separate."
   },
   "capabilities": {
     "ble": "SOURCE_DOCUMENTED_NOT_HARDWARE_VERIFIED",
@@ -36,7 +43,12 @@
     "tcpUdpMqttForwarding": "SOURCE_DOCUMENTED_NOT_HARDWARE_VERIFIED",
     "ota": "SOURCE_DOCUMENTED_NOT_HARDWARE_VERIFIED",
     "batteryFuelGauge": "SOURCE_HARDWARE_DESIGN_NOT_HARDWARE_VERIFIED",
-    "batteryTelemetry": "UNKNOWN_UNTIL_EXPOSED_BY_CONNECTED_FIRMWARE"
+    "batteryTelemetry": "UNKNOWN_UNTIL_EXPOSED_BY_CONNECTED_FIRMWARE",
+    "cep": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
+    "bleSettings": "SOURCE_VERIFIED; HARDWARE_TESTED_UPSTREAM",
+    "wifiPowerSave": "SOURCE_VERIFIED; HARDWARE_TESTED_UPSTREAM",
+    "pm5IdlePowerSave": "SOURCE_VERIFIED; HARDWARE_TESTED_UPSTREAM",
+    "autoOff": "SOURCE_VERIFIED; HARDWARE_TESTED_UPSTREAM"
   },
   "chargerPolicy": {
     "automaticConfiguration": "DISABLED",
