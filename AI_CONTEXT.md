@@ -97,7 +97,7 @@ Never store credentials, private keys or unnecessary secrets.
 
 ## CURRENT PROJECT STAGE
 
-**M0/M1 — architecture and protocol foundation; real-hardware validation pending.**
+**M1 — protocol foundation with PM5 upstream integration; real-hardware validation pending for this project.**
 
 The physical Proxmark5 is available but has not yet been validated in this repository.
 
@@ -147,8 +147,16 @@ Unknown hardware identity disables confident firmware selection.
 - A firmware constant is not proof of physical memory size.
 - Expected values are not detected values.
 - Battery percentage must not be invented from voltage.
-- Wi-Fi/BLE/TCP/BWM functionality must not be assumed merely because related code exists upstream.
+- Wi-Fi/BLE/TCP/BWM/CEP functionality must not be assumed merely because related code exists upstream.
 - The latest upstream branch is not assumed to be a stable API.
+
+## CURRENT UPSTREAM INTEGRATION BASELINE — 2026-09-27
+
+The upstream PM5 capability schema is now version 13. The append-only layout is: v9 `max_cmd_data_size`, v11 `em_size/em_allocated`, v12 `compiled_with_bwm`, v13 `compiled_with_cep`. The client must accept known versions through 13 and retain raw payloads for future versions.
+
+CEP is now default-on in PM5 upstream and can be omitted with `SKIP_CEP=1`. CEP is a PM5↔Flipper Zero transport: bounded UART handshake (`iamf0rupm5` → `yes`) followed by length-prefixed PM3 NG frames over SPI. The upstream source marks the handshake/attach as hardware-verified there, but the post-handshake NG transport is not hardware-verified by this project. Do not present it as direct PC transport.
+
+BWM capability is now explicit in the PM5 capabilities struct. BWM command availability must be gated by the reported capability rather than inferred from the model name. Upstream also has wireless abort polling, byte-window BWM flow control, BLE settings, Wi-Fi power-save modes, PM5 idle power-save and auto-off controls. The companion BWM repository remains at commit `4818511a2b179c61f80f54b5f825428cba51deb8` in the latest inspected source baseline.
 
 ## ARCHITECTURE RULES
 
@@ -279,6 +287,7 @@ Record exact upstream repository, branch/tag, commit and date whenever practical
 - Exact ESP32/BWM version.
 - Exact USB identifiers/driver requirements.
 - Exact PM5-specific protocol additions.
+- Exact host-side CEP/Flipper bridge behavior.
 - Exact battery/power telemetry.
 - Exact supported firmware backup/extraction mechanism.
 - Exact state of official Windows/Android applications.
