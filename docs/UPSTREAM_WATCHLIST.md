@@ -1,6 +1,6 @@
 # Proxmark upstream watchlist
 
-Last recorded: 2026-08-31
+Last recorded: 2026-09-27
 
 Reference repositories for future Proxmark checks and updates:
 
@@ -32,6 +32,12 @@ These are tracked for defensive wireless-security research, protocol understandi
 ## PM5/BWM topics to monitor
 
 - BLE transport / `pm5_ble_bridge.py` and cross-platform Bleak transport
+- CEP / Flipper Zero handshake, SPI framing and host bridge status
+- CAPABILITIES_VERSION changes and append-only capability fields
+- BWM byte-window flow control and ESP UART ring size
+- BWM BLE on/off, bonding and TX-power settings
+- BWM Wi-Fi modem power-save modes
+- PM5 idle power-save and BWM auto-off
 - BWM charger/gauge and battery telemetry
 - low-battery warning and over-discharge protection
 - configurable charging voltage; 4.1 V is the preferred safer beta default
