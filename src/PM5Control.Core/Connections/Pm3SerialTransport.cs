@@ -43,6 +43,13 @@ public sealed class Pm3SerialTransport : IAsyncDisposable, IPm3ReadOnlyTransport
         return Task.CompletedTask;
     }
 
+    public Task<Pm3NgExchange> SendReadOnlyAsync(ushort command, CancellationToken cancellationToken = default)
+    {
+        if (!Pm3CommandCode.IsSafeReadOnlyProbe(command))
+            throw new InvalidOperationException($"Command 0x{command:X4} is outside the read-only serial probe policy.");
+        return SendCommandAsync(command, ReadOnlyMemory<byte>.Empty, cancellationToken);
+    }
+
     public async Task AbortCurrentOperationAsync(CancellationToken cancellationToken = default)
     {
         if (!IsConnected)
