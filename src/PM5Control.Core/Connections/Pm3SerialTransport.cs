@@ -4,7 +4,7 @@ using PM5Control.Core.Protocols.Pm3;
 
 namespace PM5Control.Core.Connections;
 
-public sealed class Pm3SerialTransport : IAsyncDisposable, IPm3ReadOnlyTransport, IProxmarkAbortTransport
+public sealed class Pm3SerialTransport : IAsyncDisposable, IPm3ReadOnlyTransport, IPm3CommandTransport, IProxmarkAbortTransport
 {
     private const int MaxUnmatchedResponses = 32;
     private const ushort CmdStatus = 0x0108;
@@ -41,6 +41,13 @@ public sealed class Pm3SerialTransport : IAsyncDisposable, IPm3ReadOnlyTransport
         port.Open();
         _port = port;
         return Task.CompletedTask;
+    }
+
+    public Task<Pm3NgExchange> SendReadOnlyAsync(ushort command, CancellationToken cancellationToken = default)
+    {
+        if (!Pm3CommandCode.IsSafeReadOnlyProbe(command))
+            throw new InvalidOperationException($"Command 0x{command:X4} is outside the read-only serial probe policy.");
+        return SendCommandAsync(command, ReadOnlyMemory<byte>.Empty, cancellationToken);
     }
 
     public async Task AbortCurrentOperationAsync(CancellationToken cancellationToken = default)

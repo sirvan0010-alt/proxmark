@@ -29,6 +29,11 @@ public static class Pm3CommandCode
     // the charger register. Upstream firmware defaults the target to 4100 mV, which
     // the AW32001E's 15 mV hardware step applies as 4095 mV.
     public const ushort Pm5BwmSetChargeVoltage = 0x017D; // CMD_PM5_BWM_SET_VCHG
+    public const ushort Pm5BwmEspOta = 0x017E;             // CMD_PM5_BWM_ESP_OTA
+    public const ushort Pm5BwmBleName = 0x017F;            // CMD_PM5_BWM_BLE_NAME
+    public const ushort Pm5BwmPowerSave = 0x0181;          // CMD_PM5_BWM_POWERSAVE
+    public const ushort Pm5BwmWifiPowerSave = 0x0182;     // CMD_PM5_BWM_WIFI_PS
+    public const ushort Pm5BwmBle = 0x0183;                // CMD_PM5_BWM_BLE
 
     public static bool IsDebugResponse(ushort command) =>
         command is DebugPrintString or DebugPrintIntegers or DebugPrintBytes;

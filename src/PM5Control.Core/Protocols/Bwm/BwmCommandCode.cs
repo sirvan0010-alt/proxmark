@@ -1,7 +1,7 @@
 // PM5 Control Center — BWM command codes
 // PROVENANCE: generated from the official firmware source
 // RfidResearchGroup/Proxmark5_BWM_esp32, main/app_com_defs.h
-// commit b918166128e05455c2dcb4e232216d453bbf29ee (2026-08-08)
+// commit 4818511a2b179c61f80f54b5f825428cba51deb8 (2026-09-14)
 //
 // DO NOT reorder or renumber these values by hand. The upstream header
 // itself states new commands must be appended, never inserted, to avoid

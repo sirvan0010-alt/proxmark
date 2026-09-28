@@ -21,7 +21,7 @@ namespace PM5Control.Desktop;
 /// The BWM acknowledgement (5000) is not a PM3 response and is therefore not
 /// fed into the PM3 parser.
 /// </summary>
-internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport, IPm3ReadOnlyTransport, IProxmarkAbortTransport
+internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport, IPm3ReadOnlyTransport, IPm3CommandTransport, IProxmarkAbortTransport
 {
     public const ushort SppServiceUuid16 = 0xAE86;
     public const ushort SppCharacteristicUuid16 = 0xAE88;
@@ -113,13 +113,11 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport, IPm3Read
         _notificationsEnabled = true;
     }
 
-    public async Task<Pm3NgExchange> SendReadOnlyAsync(ushort command, CancellationToken cancellationToken = default)
+    public async Task<Pm3NgExchange> SendCommandAsync(ushort command, ReadOnlyMemory<byte> payload = default, CancellationToken cancellationToken = default)
     {
         if (!IsConnected) throw new InvalidOperationException("PM5 BLE transport is not connected.");
-        if (!Pm3CommandCode.IsSafeReadOnlyProbe(command))
-            throw new InvalidOperationException($"Command 0x{command:X4} is outside the read-only BLE probe policy.");
 
-        var request = Pm3NgFrame.EncodeCommand(command);
+        var request = Pm3NgFrame.EncodeCommand(command, payload.Span);
         var bwmRequest = BwmFrameCodec.EncodeRequest((ushort)BwmCommandCode.SendForwardData, request);
         var deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * TimeoutMs / 1000;
         var debugFrames = new List<Pm3NgResponse>();
@@ -145,6 +143,13 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport, IPm3Read
             waitCts.CancelAfter(remaining);
             await _rxSignal.WaitAsync(waitCts.Token).ConfigureAwait(false);
         }
+    }
+
+    public Task<Pm3NgExchange> SendReadOnlyAsync(ushort command, CancellationToken cancellationToken = default)
+    {
+        if (!Pm3CommandCode.IsSafeReadOnlyProbe(command))
+            throw new InvalidOperationException($"Command 0x{command:X4} is outside the read-only BLE probe policy.");
+        return SendCommandAsync(command, ReadOnlyMemory<byte>.Empty, cancellationToken);
     }
 
     public async Task<byte[]> SendAsync(ReadOnlyMemory<byte> request, CancellationToken cancellationToken = default)
