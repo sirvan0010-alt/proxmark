@@ -1,4 +1,6 @@
+using System.Buffers.Binary;
 using System.Diagnostics;
+using System.Net.Sockets;
 using PM5Control.Core.Protocols.Pm3;
 
 namespace PM5Control.Core.Connections;
@@ -90,8 +92,8 @@ public sealed class WifiTcpTransport : IProxmarkTransport, IPm3ReadOnlyTransport
     {
         if (request.Length < Pm3NgFrame.CommandHeaderSize + Pm3NgFrame.PostambleSize)
             throw new InvalidDataException("PM5 Wi-Fi/TCP transport received an undersized PM3 NG frame.");
-        var command = BitConverter.ToUInt16(request.Span.Slice(6, 2));
-        var payloadLength = (BitConverter.ToUInt16(request.Span.Slice(4, 2)) & 0x7FFF);
+        var command = BinaryPrimitives.ReadUInt16LittleEndian(request.Span.Slice(6, 2));
+        var payloadLength = BinaryPrimitives.ReadUInt16LittleEndian(request.Span.Slice(4, 2)) & 0x7FFF;
         var payload = request.Span.Slice(Pm3NgFrame.CommandHeaderSize, payloadLength).ToArray();
         return SendCommandAsync(command, payload, cancellationToken).ContinueWith(t => t.Result.Response.RawFrame, cancellationToken, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
     }
