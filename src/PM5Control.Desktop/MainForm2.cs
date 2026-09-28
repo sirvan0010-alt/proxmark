@@ -55,7 +55,7 @@ internal sealed class MainForm2 : Form
         root.Controls.Add(new Label{Text="BLE device",ForeColor=Muted,Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleLeft},0,4);_bleDevice.DropDownStyle=ComboBoxStyle.DropDownList;_bleDevice.Width=420;root.Controls.Add(_bleDevice,1,4);
         var actions=new FlowLayoutPanel{Dock=DockStyle.Fill,AutoSize=true,BackColor=Bg};_wirelessConnect.Text="Connect";_wirelessConnect.AutoSize=true;_wirelessConnect.Click+=async(_,_)=>await ConnectWirelessAsync();var scan=new Button{Text="Scan BLE",AutoSize=true};scan.Click+=async(_,_)=>await ScanBleAsync();_wirelessDiag.Text="BWM version/status";_wirelessDiag.AutoSize=true;_wirelessDiag.Click+=async(_,_)=>await WirelessDiagnosticAsync();_otaButton.Text="BWM OTA…";_otaButton.AutoSize=true;_otaButton.Click+=async(_,_)=>await RunBwmOtaAsync();actions.Controls.Add(_wirelessConnect);actions.Controls.Add(scan);actions.Controls.Add(_wirelessDiag);actions.Controls.Add(_otaButton);root.Controls.Add(actions,1,5);
         var info=new Label{Dock=DockStyle.Fill,ForeColor=Muted,Text="Protocol support: PM3-NG over native BWM Wi-Fi/TCP and BWM BLE SPP. OTA accepts only ESP32-C2 images (magic 0xE9, chip 0x000C). Physical end-to-end verification is tracked separately.",Padding=new Padding(0,10,0,0)};root.Controls.Add(info,1,6);
-        p.Controls.Add(root);UpdateWirelessEditors();return p;
+        p.Controls.Add(root);UpdateWirelessEditors();SetWirelessButtonState(false);return p;
     }
 
     private void UpdateWirelessEditors(){var wifi=string.Equals(_wirelessTransport.Text,"Wi-Fi / TCP",StringComparison.Ordinal);_wifiHost.Enabled=wifi;_wifiPort.Enabled=wifi;_bleDevice.Enabled=!wifi;_otaButton.Enabled=true;}
