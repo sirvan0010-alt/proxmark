@@ -1,16 +1,16 @@
 {
   "schemaVersion": 4,
-  "lastChecked": "2026-09-14",
+  "lastChecked": "2026-09-28",
   "component": "PM5 BWM / ESP32 subsystem",
   "status": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
   "upstream": {
     "repository": "RfidResearchGroup/Proxmark5_BWM_esp32",
     "branch": "master",
     "commit": "4818511a2b179c61f80f54b5f825428cba51deb8",
-    "researchDate": "2026-09-14",
+    "researchDate": "2026-09-28",
     "previousBaseline": "e0c4982800eb7d1ca16045631f3460f9f176427c",
-    "latestChange": "BLE notification retry delay reduced from 100 ms to 10 ms for no-memory and send-failure retry paths; UART RX buffer remains 4096 bytes",
-    "ciStatus": "NOT_YET_RECORDED_FOR_THIS_EXACT_COMMIT",
+    "latestChange": "BLE bulk-transfer retry pacing fix remains latest BWM/ESP32 repository change; current proxmark3 upstream additionally exposes native PM5 Wi-Fi TCP and BWM ESP OTA over the PM3 command link.",
+    "ciStatus": "NOT_RECORDED",
     "previousCiStatus": "SUCCESS",
     "previousCiCommit": "e0c4982800eb7d1ca16045631f3460f9f176427c",
     "ciMeaning": "CI build/package success is evidence of firmware buildability only; it is not physical hardware verification."
@@ -34,7 +34,7 @@
     "wifi": "SOURCE_DOCUMENTED_NOT_HARDWARE_VERIFIED",
     "wifiScanner": "SOURCE_DOCUMENTED_NOT_HARDWARE_VERIFIED",
     "tcpUdpMqttForwarding": "SOURCE_DOCUMENTED_NOT_HARDWARE_VERIFIED",
-    "ota": "SOURCE_DOCUMENTED_NOT_HARDWARE_VERIFIED",
+    "ota": "SOURCE_VERIFIED_PROTOCOL_NOT_HARDWARE_VERIFIED",
     "batteryFuelGauge": "SOURCE_HARDWARE_DESIGN_NOT_HARDWARE_VERIFIED",
     "batteryTelemetry": "UNKNOWN_UNTIL_EXPOSED_BY_CONNECTED_FIRMWARE"
   },
@@ -44,5 +44,5 @@
     "note": "The Control Center must not silently apply a guessed charge-voltage target. Battery chemistry and production charge limits remain hardware/pack specific."
   },
   "evidenceRule": "Upstream source and CI evidence must never be promoted to HARDWARE_VERIFIED without reproducible observation on a physical PM5+BWM unit.",
-  "integrationPolicy": "Control Center may display source-backed capabilities and verified device telemetry separately, but must not invent telemetry or perform unverified charger configuration."
+  "integrationPolicy": "Control Center now implements native PM5 Wi-Fi/TCP PM3-NG transport and the source-verified BWM ESP32-C2 OTA command protocol. Physical end-to-end verification remains separate. Do not label the wireless stack stable/production-ready."
 }
