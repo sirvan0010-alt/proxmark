@@ -149,3 +149,23 @@ This is the chronological evidence log for the PM5 Control Center.
 - Upstream USB receive robustness and endpoint-boundary behavior.
 - Continuous monitoring of RfidResearchGroup/Proxmark5_BWM_esp32 for BLE/Wi-Fi/BWM firmware changes.
 - Current upstream `CMD_CAPABILITIES` schema v11 and PM5-specific capability bits.
+
+## 2026-09-28 — PM5 BWM/Wi-Fi/OTA sync
+
+**Question:** Which current upstream PM5/BWM changes are ready to adopt in the Control Center?
+
+**Observation:** Upstream PM5 documentation currently defines native Wi-Fi STA + TCP forwarding on port 7777, BWM ESP32 OTA over the PM3 command link, BLE management, Wi-Fi power-save management and BWM bulk-flow pacing. The latest BWM/ESP32 repository commit remains `4818511a2b179c61f80f54b5f825428cba51deb8`. Current proxmark3 master additionally contains the PM5 Wi-Fi flashing path and the BWM ESP OTA command `CMD_PM5_BWM_ESP_OTA = 0x017E`.
+
+**Evidence level:** SOURCE_VERIFIED
+
+**Source:** RfidResearchGroup/proxmark3; RfidResearchGroup/Proxmark5_BWM_esp32; current PM5-BWM usage documentation.
+
+**Upstream commit/tag:** proxmark3 master checked 2026-09-28; BWM/ESP32 `4818511a2b179c61f80f54b5f825428cba51deb8` (2026-09-14).
+
+**Hardware identity:** None for our project.
+
+**Test:** Added native Wi-Fi/TCP transport, explicit generic PM3 command transport boundary, source-verified BWM ESP32-C2 OTA protocol implementation and OTA image/chunking tests. Physical PM5+BWM end-to-end verification remains open.
+
+**Result:** The Control Center now has protocol-level support for the current Wi-Fi/TCP and BWM ESP OTA delta without weakening the read-only diagnostic boundary.
+
+**Next action:** CI, then physical PM5+BWM Wi-Fi/BLE/OTA verification. Keep realtime LF/COTAG streaming as a separate unresolved data-path item.
