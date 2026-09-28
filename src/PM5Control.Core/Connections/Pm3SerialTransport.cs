@@ -4,7 +4,7 @@ using PM5Control.Core.Protocols.Pm3;
 
 namespace PM5Control.Core.Connections;
 
-public sealed class Pm3SerialTransport : IAsyncDisposable, IPm3ReadOnlyTransport, IProxmarkAbortTransport
+public sealed class Pm3SerialTransport : IAsyncDisposable, IPm3ReadOnlyTransport, IPm3CommandTransport, IProxmarkAbortTransport
 {
     private const int MaxUnmatchedResponses = 32;
     private const ushort CmdStatus = 0x0108;
