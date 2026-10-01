@@ -52,7 +52,6 @@ public sealed class BwmEspFirmwareUpdater
     {
         var info = InspectImage(image.Span);
         if (!info.IsValid) throw new InvalidDataException(info.Error);
-        if (image.Length > uint.MaxValue) throw new ArgumentOutOfRangeException(nameof(image));
 
         var begin = await _transport.SendCommandAsync(Command, BeginPayload((uint)image.Length), cancellationToken).ConfigureAwait(false);
         if (begin.Response.Status != 0)
