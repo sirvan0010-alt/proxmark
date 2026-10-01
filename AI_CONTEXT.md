@@ -303,3 +303,9 @@ The BWM ESP32 upstream now includes optional mDNS (commit `b450b1336dfe00fb507ef
 The current main Proxmark3 commit checked is `256f30f0fa7cb2fe84588f3d7ceb5eb3571a3363`; it includes a host connection hint for mDNS. The BWM OTA path updates ESP32-C2 over the existing BWM app_com link and is separate from PM5 ARM/FPGA flashing.
 
 PR #10's code changes are being selectively ported onto current main because its branch diverged. Do not merge the stale branch wholesale. PR #12's consolidated master plan has been merged to main (merge commit `8241ad702d3fe5206920f3e8b3efb4583ba2d9fe`).
+
+## Firmware path distinction — mandatory
+
+PR #3650 (`2630310336c28fd04b4b11aea8e77a7895a55de9`) adds **main PM5 firmware flashing over a BWM wireless link using a BWM-aware bootrom**. It is not the ESP32-C2 OTA command. The bootrom reports `DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM`; upstream host flasher refuses wireless writes if this flag is absent and advises installing a BWM-capable bootrom over USB first. Our PM3-NG `WifiTcpTransport` is not a bootloader OLD-frame transport.
+
+Keep three paths distinct: PM5 ARM/FPGA wireless flash through BWM-aware bootrom; ESP32-C2 BWM OTA through `CMD_PM5_BWM_ESP_OTA`; ESP32 recovery through physical 5-pin header/esptool. No firmware write is authorized by a source update or by the existence of these code paths.
