@@ -10,7 +10,7 @@ public sealed class BwmEspFirmwareUpdaterTests
     [Fact]
     public void InspectImage_AcceptsEsp32C2Header()
     {
-        var image = new byte[32];
+        var image = new byte[36];
         image[0] = 0xE9;
         BinaryPrimitives.WriteUInt16LittleEndian(image.AsSpan(12, 2), BwmEspFirmwareUpdater.Esp32C2ChipId);
         BinaryPrimitives.WriteUInt32LittleEndian(image.AsSpan(0x20, 4), BwmEspFirmwareUpdater.EspAppSignature);
@@ -68,15 +68,34 @@ public sealed class BwmEspFirmwareUpdaterTests
         Assert.Equal(BwmEspFirmwareUpdater.ActionEnd, transport.Commands[3].Payload[0]);
     }
 
+    [Fact]
+    public async Task Update_StopsWhenBeginIsRejected()
+    {
+        var image = new byte[36];
+        image[0] = 0xE9;
+        BinaryPrimitives.WriteUInt16LittleEndian(image.AsSpan(12, 2), BwmEspFirmwareUpdater.Esp32C2ChipId);
+        BinaryPrimitives.WriteUInt32LittleEndian(image.AsSpan(0x20, 4), BwmEspFirmwareUpdater.EspAppSignature);
+        var transport = new RecordingCommandTransport { BeginStatus = -1 };
+        var updater = new BwmEspFirmwareUpdater(transport);
+
+        await Assert.ThrowsAsync<IOException>(() => updater.UpdateAsync(image));
+
+        Assert.Single(transport.Commands);
+        Assert.Equal(BwmEspFirmwareUpdater.ActionBegin, transport.Commands[0].Payload[0]);
+    }
+
     private sealed class RecordingCommandTransport : IPm3CommandTransport
     {
         public List<(ushort Command, byte[] Payload)> Commands { get; } = new();
+        public sbyte BeginStatus { get; set; }
         public bool IsConnected => true;
 
         public Task<Pm3NgExchange> SendCommandAsync(ushort command, ReadOnlyMemory<byte> payload = default, CancellationToken cancellationToken = default)
         {
-            Commands.Add((command, payload.ToArray()));
-            var response = new Pm3NgResponse(command, 0, 0, Array.Empty<byte>(), Array.Empty<byte>());
+            var bytes = payload.ToArray();
+            Commands.Add((command, bytes));
+            var status = bytes.Length > 0 && bytes[0] == BwmEspFirmwareUpdater.ActionBegin ? BeginStatus : (sbyte)0;
+            var response = new Pm3NgResponse(command, status, 0, Array.Empty<byte>(), Array.Empty<byte>());
             return Task.FromResult(new Pm3NgExchange(Array.Empty<byte>(), response, Array.Empty<Pm3NgResponse>(), Array.Empty<Pm3NgResponse>()));
         }
     }
