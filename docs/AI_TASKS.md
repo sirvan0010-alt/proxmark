@@ -146,3 +146,7 @@ Unit fixtures cover query construction, compressed PTR/SRV/A parsing and malform
 ## Windows UI handoff — mDNS
 
 The active desktop entry point is `MainForm2` (not the older `MainForm`). Its BWM/Wireless tab now has an explicit Discover (mDNS) button and result selector. Discovery only fills host/port after user selection; it must not auto-connect. No result means UNKNOWN / manual endpoint fallback, not "device missing". Check the Windows build in CI.
+
+## Firmware update safety rule
+
+The BWM OTA button in active `MainForm2` is intentionally disabled. Do not re-enable it until the workflow verifies package provenance/hash, exact ESP32-C2/BWM firmware compatibility, a recovery path and post-update version confirmation. PR #3650's main PM5 ARM/FPGA wireless flash is a separate BWM-aware bootrom path and needs its own OLD-frame bootloader transport and capability gate.
