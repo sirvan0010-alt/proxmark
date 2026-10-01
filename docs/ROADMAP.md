@@ -167,3 +167,9 @@ PR #3650 adds main PM5 ARM/FPGA firmware flashing over a BWM wireless stream thr
 - [x] List discovered PM5 service instances and fill host/port only after user selection.
 - [x] Do not auto-connect; retain manual IP/port fallback.
 - [ ] Confirm Windows desktop build in CI and test on the user's network.
+
+## Firmware write safety
+
+- [x] Keep BWM ESP32-C2 OTA disabled in the UI until package provenance, compatibility and recovery checks are implemented.
+- [ ] Implement separate BWM-aware bootrom transport for PM5 ARM/FPGA wireless flashing.
+- [ ] Only enable firmware writes after trusted package verification, exact target identification, recovery plan and explicit user confirmation.
