@@ -30,7 +30,7 @@ public sealed record Pm5BootloaderDeviceInfo(
     public bool IsInBootromMode => Flags.HasFlag(Pm5BootloaderFlags.CurrentModeBootrom);
     public bool UnderstandsBwmStream => Flags.HasFlag(Pm5BootloaderFlags.UnderstandsBwmStream);
     public bool BwmModuleResponded => UnderstandsBwmStream && BwmBaudRate > 0;
-    public bool CanUseBwmWirelessBootloaderTransport => BwmModuleResponded;
+    public bool BwmBootloaderBridgeReady => UnderstandsBwmStream && BwmModuleResponded;
 
     public static bool TryParse(Pm3OldFrame frame, out Pm5BootloaderDeviceInfo? info)
     {
