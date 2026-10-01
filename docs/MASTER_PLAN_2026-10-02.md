@@ -226,3 +226,7 @@ BWM firmware now has an optional mDNS responder (Kconfig default enabled) publis
 ## mDNS implementation update — 2026-10-02
 
 Core now contains `Pm5MdnsDiscovery`: PTR query for `_proxmark5._tcp.local`, IPv4 multicast discovery, compressed DNS name parsing, PTR/SRV/TXT/A/AAAA extraction, and result objects with hostname/port/addresses. Unit tests cover query shape, compressed PTR/SRV/A records and malformed/non-response packets. CI and physical PM5/BWM network verification remain pending. Manual IP/port entry remains the fallback; no mDNS response must never be interpreted as proof that the PM5 is absent.
+
+## CI audit — 2026-10-02
+
+CI caught and prompted fixes to an inherited serial command transport compile defect and two incorrect pre-existing test fixtures (BWM OTA chunk command count; PM3 response frame overhead at the BWM 2048-byte fragmentation boundary). The BWM abort CRC golden vector was aligned to upstream's low-byte-first CRC serialization. The follow-up CI run is still required to validate the current head, including mDNS tests.
