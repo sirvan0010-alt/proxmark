@@ -309,3 +309,13 @@ PR #10's code changes are being selectively ported onto current main because its
 PR #3650 (`2630310336c28fd04b4b11aea8e77a7895a55de9`) adds **main PM5 firmware flashing over a BWM wireless link using a BWM-aware bootrom**. It is not the ESP32-C2 OTA command. The bootrom reports `DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM`; upstream host flasher refuses wireless writes if this flag is absent and advises installing a BWM-capable bootrom over USB first. Our PM3-NG `WifiTcpTransport` is not a bootloader OLD-frame transport.
 
 Keep three paths distinct: PM5 ARM/FPGA wireless flash through BWM-aware bootrom; ESP32-C2 BWM OTA through `CMD_PM5_BWM_ESP_OTA`; ESP32 recovery through physical 5-pin header/esptool. No firmware write is authorized by a source update or by the existence of these code paths.
+
+## Current mainline checkpoint — 2026-10-02
+
+Current main includes merged PR #12 (master plan) and PR #13 (PM5 capabilities v13, CEP model, BWM OTA validation improvements, mDNS discovery Core/UI, serial transport and Windows BLE fixes). PR #13 merge commit: `69360c313cf5b68e85262dedc2cff38f90ada47f`.
+
+Final CI run `36937595521` passed all gates: upstream evidence, claim audit, Ubuntu Release build/tests, Windows Release build/tests, and Windows self-contained desktop publish. No physical hardware tests or firmware writes were performed.
+
+The active desktop entry point is `MainForm2`; BWM/Wireless tab has manual mDNS discovery and user-selected host/port fill. It does not auto-connect. BWM OTA button is intentionally disabled pending package/recovery verification.
+
+Next priority is a read-only physical PM5/BWM baseline, followed by a read-only bootloader Device Info parser for `DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM`. PR #3650's main PM5 wireless flashing path is separate from ESP32-C2 BWM OTA and needs its own legacy bootloader/OLD-frame transport. See `docs/MASTER_PLAN_2026-10-02.md`.
