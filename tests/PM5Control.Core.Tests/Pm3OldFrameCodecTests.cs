@@ -92,7 +92,7 @@ public sealed class Pm5BootloaderDeviceInfoTests
         Assert.NotNull(info);
         Assert.True(info!.UnderstandsBwmStream);
         Assert.False(info.BwmModuleResponded);
-        Assert.False(info.CanUseBwmWirelessBootloaderTransport);
+        Assert.False(info.BwmBootloaderBridgeReady);
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public sealed class Pm5BootloaderDeviceInfoTests
         Assert.True(Pm5BootloaderDeviceInfo.TryParse(frame, out var info));
         Assert.NotNull(info);
         Assert.False(info!.UnderstandsBwmStream);
-        Assert.False(info.CanUseBwmWirelessBootloaderTransport);
+        Assert.False(info.BwmBootloaderBridgeReady);
     }
 
     [Fact]
