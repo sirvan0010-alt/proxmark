@@ -180,3 +180,9 @@ The next CI pass compiled Core/CLI/Simulator successfully but reported two test 
 - The BWM abort CRC vector was corrected to the little-endian byte order used by upstream `app_cmd_uart.c`.
 
 These are repository/test corrections, not physical hardware findings. The subsequent CI run must verify them together with the newly added mDNS parser tests.
+
+## 2026-10-02 — CI run 36937145061
+
+The full Linux build/test matrix passed, including the new PM5 capabilities, CEP, OTA and mDNS parser tests. The Windows test matrix also passed. Windows desktop restore succeeded, but the single-file desktop publish failed on an inherited invalid C# character literal in MainForm2. It has since been corrected. An impossible image-length comparison in the OTA updater that generated a compiler warning was also removed.
+
+The new mDNS button/result selector was added to active MainForm2 after this run, so the next full CI run must validate both that UI integration and the Windows publish step.
