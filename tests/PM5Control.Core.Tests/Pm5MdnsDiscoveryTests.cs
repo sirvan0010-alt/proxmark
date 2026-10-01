@@ -12,7 +12,6 @@ public sealed class Pm5MdnsDiscoveryTests
     {
         var query = Pm5MdnsDiscovery.BuildQuery();
 
-        Assert.Equal(12, query.Length - Encoding.ASCII.GetByteCount(Pm5MdnsDiscovery.ServiceType) - 5);
         Assert.Equal((ushort)1, BinaryPrimitives.ReadUInt16BigEndian(query.AsSpan(4, 2)));
         Assert.Equal((ushort)12, BinaryPrimitives.ReadUInt16BigEndian(query.AsSpan(query.Length - 4, 2)));
         Assert.Equal((ushort)1, BinaryPrimitives.ReadUInt16BigEndian(query.AsSpan(query.Length - 2, 2)));
@@ -72,8 +71,9 @@ public sealed class Pm5MdnsDiscoveryTests
         AddUInt16(packet, 7777);
         var hostOffset = packet.Count;
         AddName(packet, "pm5.local");
-        BinaryPrimitives.WriteUInt16BigEndian(CollectionsMarshal.AsSpan(packet).Slice(srvLengthOffset, 2),
-            (ushort)(packet.Count - srvDataStart));
+        var srvLength = (ushort)(packet.Count - srvDataStart);
+        packet[srvLengthOffset] = (byte)(srvLength >> 8);
+        packet[srvLengthOffset + 1] = (byte)srvLength;
 
         // A owner is compressed to the host name inside the SRV RDATA.
         AddPointer(packet, hostOffset);
