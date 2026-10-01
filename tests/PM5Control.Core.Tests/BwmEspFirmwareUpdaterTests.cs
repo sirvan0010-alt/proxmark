@@ -13,6 +13,7 @@ public sealed class BwmEspFirmwareUpdaterTests
         var image = new byte[32];
         image[0] = 0xE9;
         BinaryPrimitives.WriteUInt16LittleEndian(image.AsSpan(12, 2), BwmEspFirmwareUpdater.Esp32C2ChipId);
+        BinaryPrimitives.WriteUInt32LittleEndian(image.AsSpan(0x20, 4), BwmEspFirmwareUpdater.EspAppSignature);
 
         var result = BwmEspFirmwareUpdater.InspectImage(image);
 
@@ -23,9 +24,10 @@ public sealed class BwmEspFirmwareUpdaterTests
     [Fact]
     public void InspectImage_RejectsWrongChip()
     {
-        var image = new byte[32];
+        var image = new byte[36];
         image[0] = 0xE9;
         BinaryPrimitives.WriteUInt16LittleEndian(image.AsSpan(12, 2), 0x0005);
+        BinaryPrimitives.WriteUInt32LittleEndian(image.AsSpan(0x20, 4), BwmEspFirmwareUpdater.EspAppSignature);
 
         var result = BwmEspFirmwareUpdater.InspectImage(image);
 
@@ -34,11 +36,25 @@ public sealed class BwmEspFirmwareUpdaterTests
     }
 
     [Fact]
+    public void InspectImage_RejectsMissingAppSignature()
+    {
+        var image = new byte[36];
+        image[0] = 0xE9;
+        BinaryPrimitives.WriteUInt16LittleEndian(image.AsSpan(12, 2), BwmEspFirmwareUpdater.Esp32C2ChipId);
+
+        var result = BwmEspFirmwareUpdater.InspectImage(image);
+
+        Assert.False(result.IsValid);
+        Assert.Contains("app signature", result.Error);
+    }
+
+    [Fact]
     public async Task Update_UsesVerified240ByteChunksAndBeginEnd()
     {
         var image = new byte[500];
         image[0] = 0xE9;
         BinaryPrimitives.WriteUInt16LittleEndian(image.AsSpan(12, 2), BwmEspFirmwareUpdater.Esp32C2ChipId);
+        BinaryPrimitives.WriteUInt32LittleEndian(image.AsSpan(0x20, 4), BwmEspFirmwareUpdater.EspAppSignature);
         var transport = new RecordingCommandTransport();
         var updater = new BwmEspFirmwareUpdater(transport);
 
