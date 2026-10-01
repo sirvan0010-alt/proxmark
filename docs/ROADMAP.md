@@ -147,3 +147,7 @@ The authoritative cross-session plan is now [docs/MASTER_PLAN_2026-10-02.md](MAS
 - [ ] Verify mDNS, BLE and Wi-Fi behaviour on the user's physical PM5/BWM.
 
 See [UPSTREAM_UPDATE_2026-10-02.md](UPSTREAM_UPDATE_2026-10-02.md). Source-level support is not physical-device verification.
+
+## Wireless firmware path clarification — 2026-10-02
+
+PR #3650 adds main PM5 ARM/FPGA firmware flashing over a BWM wireless stream through a BWM-aware bootrom. This is separate from ESP32-C2 BWM OTA (`CMD_PM5_BWM_ESP_OTA`) and physical ESP32 recovery. The Control Center does not yet implement the legacy bootloader/OLD-frame wireless flash transport. Before implementing, require the bootrom capability flag `DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM`, exact image compatibility, trusted image checksums and a recovery plan.
