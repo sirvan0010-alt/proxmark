@@ -53,11 +53,15 @@ Important discrepancy: the current PM5 BWM usage guide still says there is no mD
 
 Control Center follow-up: add optional DNS-SD discovery of `_proxmark5._tcp`, with fallback to explicit IP/port. Do not assume mDNS is available on all installed BWM firmware or networks.
 
-## BWM OTA semantics
+## Main PM5 firmware flashing over BWM wireless (PR #3650)
+
+PR #3650 is **not** the BWM ESP32-C2 OTA command. It adds a wireless path for flashing the main PM5 firmware through a BWM-aware bootrom. The bootrom runs a polled UART4/app_com bridge, reports `DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM`, and accepts forwarded legacy bootloader commands/data. The host flasher recognises `tcp:`, `udp:` and `bt:` as wireless and refuses to write if the bootrom does not advertise the BWM-stream capability. Upstream's error message says to flash a BWM-capable bootrom over USB once, then retry wireless flashing. Our `WifiTcpTransport` carries PM3-NG commands and is not by itself a compatible bootloader/OLD-frame flasher.
+
+## BWM ESP32-C2 OTA semantics
 
 Upstream `hw bwm upgrade` / `CMD_PM5_BWM_ESP_OTA` is an ESP32-C2 update over the existing BWM app_com link. Its actions include version query, begin with total image size, chunk write, end/finalise/reboot and abort. The current code explicitly checks chunk size against `BWM_OTA_CHUNK_MAX`; image validation checks ESP image magic `0xE9` and ESP32-C2 chip ID `0x000C`.
 
-This is BWM ESP32-C2 OTA, not PM5 ARM/FPGA firmware flashing. Do not run on the user's device without exact installed-version identification, a trusted image/checksum, compatibility and recovery assessment, and explicit approval.
+This is BWM ESP32-C2 OTA, not PM5 ARM/FPGA firmware flashing. Upstream checks image magic `0xE9`, ESP32-C2 chip ID `0x000C`, and app signature `0xABCD5432`; chunks are at most 240 bytes and paced because the AT32↔ESP UART can drop bursts. The host retries the whole OTA up to six times because the BWM OTA path has no resume. A missing END acknowledgement can mean the ESP rebooted; confirm the running version after reconnecting. Do not run on the user's device without exact installed-version identification, a trusted image/checksum, compatibility and recovery assessment, and explicit approval.
 
 ## Upstream stability warning
 
