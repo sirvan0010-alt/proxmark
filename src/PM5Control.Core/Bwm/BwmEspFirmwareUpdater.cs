@@ -21,9 +21,10 @@ public sealed class BwmEspFirmwareUpdater
     public const byte ActionEnd = 0x02;
     public const byte ActionAbort = 0x03;
     public const byte ActionVersion = 0x04;
-    public const byte ActionReboot = 0x05;
     public const int MaxChunkSize = 240;
     public const ushort Esp32C2ChipId = 0x000C;
+    public const uint EspAppSignature = 0xABCD5432;
+    public const int MinimumImageLength = 0x24;
 
     private readonly IPm3CommandTransport _transport;
 
@@ -32,11 +33,13 @@ public sealed class BwmEspFirmwareUpdater
 
     public static BwmEspImageInfo InspectImage(ReadOnlySpan<byte> image)
     {
-        if (image.Length < 16) return BwmEspImageInfo.Invalid("Image is shorter than the ESP extended image header.");
+        if (image.Length < MinimumImageLength) return BwmEspImageInfo.Invalid($"Image is shorter than the ESP app descriptor (minimum {MinimumImageLength} bytes).");
         if (image[0] != 0xE9) return BwmEspImageInfo.Invalid($"Invalid ESP image magic 0x{image[0]:X2}; expected 0xE9.");
         var chipId = BinaryPrimitives.ReadUInt16LittleEndian(image.Slice(12, 2));
         if (chipId != Esp32C2ChipId) return BwmEspImageInfo.Invalid($"Wrong ESP target chip id 0x{chipId:X4}; expected ESP32-C2 0x{Esp32C2ChipId:X4}.");
-        return new BwmEspImageInfo(true, image.Length, chipId, "ESP32-C2 image header accepted");
+        var appSignature = BinaryPrimitives.ReadUInt32LittleEndian(image.Slice(0x20, 4));
+        if (appSignature != EspAppSignature) return BwmEspImageInfo.Invalid($"Invalid ESP app signature 0x{appSignature:X8}; expected 0x{EspAppSignature:X8}.");
+        return new BwmEspImageInfo(true, image.Length, chipId, "ESP32-C2 image header and app signature accepted");
     }
 
     public async Task<string?> ReadVersionAsync(CancellationToken cancellationToken = default)
@@ -51,7 +54,11 @@ public sealed class BwmEspFirmwareUpdater
         if (!info.IsValid) throw new InvalidDataException(info.Error);
         if (image.Length > uint.MaxValue) throw new ArgumentOutOfRangeException(nameof(image));
 
-        await _transport.SendCommandAsync(Command, BeginPayload((uint)image.Length), cancellationToken).ConfigureAwait(false);
+        var begin = await _transport.SendCommandAsync(Command, BeginPayload((uint)image.Length), cancellationToken).ConfigureAwait(false);
+        if (begin.Response.Status != 0)
+            throw new IOException($"BWM OTA BEGIN failed; status={begin.Response.Status}, reason={begin.Response.Reason}.");
+
+        var finalizeCommandStarted = false;
         try
         {
             var sent = 0;
@@ -69,12 +76,18 @@ public sealed class BwmEspFirmwareUpdater
                 progress?.Report(new BwmEspUpdateProgress(sent, image.Length));
             }
 
+            // END may finalize the ESP image and reboot the module. If the link
+            // drops after this point, an abort is unsafe and completion is ambiguous.
+            finalizeCommandStarted = true;
             var end = await _transport.SendCommandAsync(Command, new[] { ActionEnd }, cancellationToken).ConfigureAwait(false);
             if (end.Response.Status != 0)
                 throw new IOException($"BWM OTA END failed; status={end.Response.Status}, reason={end.Response.Reason}.");
         }
-        catch
+        catch (Exception ex)
         {
+            if (finalizeCommandStarted)
+                throw new InvalidOperationException("BWM OTA END was sent but completion was not confirmed. The ESP may have finalized and rebooted; reconnect and read the BWM version before retrying.", ex);
+
             try { await _transport.SendCommandAsync(Command, new[] { ActionAbort }, CancellationToken.None).ConfigureAwait(false); } catch { }
             throw;
         }
