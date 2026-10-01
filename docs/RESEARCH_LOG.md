@@ -169,3 +169,14 @@ This is the chronological evidence log for the PM5 Control Center.
 **Result:** The Control Center now has protocol-level support for the current Wi-Fi/TCP and BWM ESP OTA delta without weakening the read-only diagnostic boundary.
 
 **Next action:** CI, then physical PM5+BWM Wi-Fi/BLE/OTA verification. Keep realtime LF/COTAG streaming as a separate unresolved data-path item.
+
+## 2026-10-02 — Integration CI audit
+
+The first PR #13 CI pass exposed an inherited build failure in `Pm3SerialTransport`: it declared `IPm3CommandTransport` but had a duplicate `SendReadOnlyAsync` method and no payload-capable `SendCommandAsync`. The transport now has one read-only guard method and one generic payload-capable command method.
+
+The next CI pass compiled Core/CLI/Simulator successfully but reported two test fixture issues:
+- BWM OTA happy-path expected four commands for BEGIN + three WRITE chunks + END; correct count is five, with 240/240/20-byte chunks.
+- A 4064-byte PM3 payload produces a 4076-byte response frame including 12 bytes of header/postamble, so it is two BWM/FPC 2048-byte chunks, not a third invalid slice.
+- The BWM abort CRC vector was corrected to the little-endian byte order used by upstream `app_cmd_uart.c`.
+
+These are repository/test corrections, not physical hardware findings. The subsequent CI run must verify them together with the newly added mDNS parser tests.
