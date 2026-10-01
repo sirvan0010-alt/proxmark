@@ -60,12 +60,13 @@ public sealed class BwmEspFirmwareUpdaterTests
 
         await updater.UpdateAsync(image);
 
-        Assert.Equal(4, transport.Commands.Count);
+        Assert.Equal(5, transport.Commands.Count);
         Assert.Equal(BwmEspFirmwareUpdater.Command, transport.Commands[0].Command);
         Assert.Equal(BwmEspFirmwareUpdater.ActionBegin, transport.Commands[0].Payload[0]);
         Assert.Equal(241, transport.Commands[1].Payload.Length);
-        Assert.Equal(21, transport.Commands[2].Payload.Length);
-        Assert.Equal(BwmEspFirmwareUpdater.ActionEnd, transport.Commands[3].Payload[0]);
+        Assert.Equal(241, transport.Commands[2].Payload.Length);
+        Assert.Equal(21, transport.Commands[3].Payload.Length);
+        Assert.Equal(BwmEspFirmwareUpdater.ActionEnd, transport.Commands[4].Payload[0]);
     }
 
     [Fact]
