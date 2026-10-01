@@ -190,3 +190,9 @@ The new mDNS button/result selector was added to active MainForm2 after this run
 ## 2026-10-02 — Windows BLE publish audit
 
 The next Windows publish exposed inherited API assumptions in `WindowsBleProxmarkTransport`: `GattCharacteristic` does not expose `Dispose()` or `MaxWriteValueSize` in the Windows SDK target used by this project. Removed the invalid characteristic disposal calls and now use the guaranteed default ATT write payload of 20 bytes (MTU 23 minus 3-byte ATT header). Negotiated GATT MTU sizing can be added later through the supported session API. No BLE hardware transfer was performed. A fresh Windows desktop publish is required.
+
+## 2026-10-02 — PR #13 merged
+
+PR #13 merged to main as `69360c313cf5b68e85262dedc2cff38f90ada47f`. Final CI run `36937595521` passed both evidence gates, Ubuntu build/tests, Windows build/tests, Windows desktop restore and self-contained single-file publish. This includes the mDNS parser/UI, packed capabilities v12/v13 decoder, CEP model, BWM OTA guard changes and Windows BLE GATT API correction.
+
+No PM5/BWM physical device was flashed or modified. The BWM OTA UI remains disabled. Next hardware phase is read-only baseline collection and bootloader capability detection.
