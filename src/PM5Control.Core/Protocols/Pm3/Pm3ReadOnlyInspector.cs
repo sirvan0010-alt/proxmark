@@ -8,8 +8,9 @@ public sealed record Pm3ReadOnlyIdentity(string Hardware, string ArmFirmware, st
 
 /// <summary>
 /// Decoded CMD_CAPABILITIES response using the upstream append-only capabilities_t layout.
-/// Versions 6 through 11 share the first 13 bytes; v9 appends max_cmd_data_size and
-/// v11 appends em_size/em_allocated. Unknown versions remain UNKNOWN rather than guessed.
+/// Versions 6 through 13 use an append-only layout: v9 adds max_cmd_data_size,
+/// v11 adds em_size/em_allocated, v12 adds compiled_with_bwm and v13 adds
+/// compiled_with_cep. Unknown versions remain UNKNOWN rather than guessed.
 /// </summary>
 public sealed record Pm3CapabilitiesReport(
     int SchemaVersion,
@@ -27,7 +28,9 @@ public sealed record Pm3CapabilitiesReport(
     bool HardwareI2cEeprom = false,
     ushort MaxCommandDataSize = 0,
     ushort EmulatorSize = 0,
-    bool EmulatorAllocated = false);
+    bool EmulatorAllocated = false,
+    bool CompiledWithBwm = false,
+    bool CompiledWithCep = false);
 
 public sealed record Pm3RawDiagnostic(
     string CommandName,
@@ -103,17 +106,17 @@ public static class Pm3ReadOnlyInspector
 
     /// <summary>
     /// Decodes the upstream append-only capabilities_t layout.
-    /// Versions 6..8 are the original 13-byte layout. Version 9 appends a uint16
-    /// max_cmd_data_size. Version 11 appends uint16 em_size and bool em_allocated.
-    /// Versions 10 and 11 retain the preceding fields. Unknown versions are rejected.
+    /// The upstream capabilities_t layout is append-only. Version 9 appends
+    /// max_cmd_data_size; v11 appends em_size/em_allocated; v12 appends
+    /// compiled_with_bwm; v13 appends compiled_with_cep. Unknown versions remain raw.
     /// </summary>
     public static Pm3CapabilitiesReport DecodeCapabilities(byte[] payload)
     {
         var version = payload.Length == 0 ? -1 : payload[0];
-        if (version < 6 || version > 11)
+        if (version < 6 || version > 13)
             return UnknownCapabilities(version, payload);
 
-        var minimumLength = version >= 11 ? 18 : version >= 9 ? 15 : 13;
+        var minimumLength = version >= 13 ? 20 : version >= 12 ? 19 : version >= 11 ? 18 : version >= 9 ? 15 : 13;
         if (payload.Length < minimumLength)
             return UnknownCapabilities(version, payload);
 
@@ -168,6 +171,8 @@ public static class Pm3ReadOnlyInspector
         ushort maxCommandDataSize = 0;
         ushort emulatorSize = 0;
         var emulatorAllocated = false;
+        var compiledWithBwm = false;
+        var compiledWithCep = false;
         if (version >= 9)
             maxCommandDataSize = BinaryPrimitives.ReadUInt16LittleEndian(payload.AsSpan(13, 2));
         if (version >= 11)
@@ -175,6 +180,13 @@ public static class Pm3ReadOnlyInspector
             emulatorSize = BinaryPrimitives.ReadUInt16LittleEndian(payload.AsSpan(15, 2));
             emulatorAllocated = Has(payload[17], 0);
         }
+        if (version >= 12)
+            compiledWithBwm = Has(payload[18], 0);
+        if (version >= 13)
+            compiledWithCep = Has(payload[19], 0);
+
+        if (compiledWithBwm) features.Add("BWM compiled in");
+        if (compiledWithCep) features.Add("CEP compiled in");
 
         return new Pm3CapabilitiesReport(
             version,
@@ -192,7 +204,9 @@ public static class Pm3ReadOnlyInspector
             hardwareI2cEeprom,
             maxCommandDataSize,
             emulatorSize,
-            emulatorAllocated);
+            emulatorAllocated,
+            compiledWithBwm,
+            compiledWithCep);
     }
 
     private static Pm3CapabilitiesReport UnknownCapabilities(int version, byte[] payload)
