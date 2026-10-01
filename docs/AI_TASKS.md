@@ -131,3 +131,14 @@ Add simulator and integration coverage for:
 - DNS-SD service `_proxmark5._tcp` and `<hostname>.local` fallback to explicit IP/port.
 
 Do not equate a compiled capability with physical presence or active link state. Do not infer mDNS availability from Kconfig defaults. Do not conflate BWM ESP32-C2 OTA with PM5 ARM/FPGA firmware flashing. See `docs/UPSTREAM_UPDATE_2026-10-02.md` for source provenance.
+
+## DNS-SD implementation update — 2026-10-02
+
+Implemented in Core:
+- Build a PTR query for `_proxmark5._tcp.local`.
+- Discover via IPv4 mDNS multicast 224.0.0.251:5353.
+- Parse compressed DNS names, PTR/SRV/TXT/A/AAAA records.
+- Return service instance, host, TCP port and any advertised addresses.
+- Keep discovery optional and preserve explicit IP/port fallback.
+
+Unit fixtures cover query construction, compressed PTR/SRV/A parsing and malformed/non-response packets. Still required: CI pass and physical network test against the user's installed BWM firmware; absence of mDNS must remain UNKNOWN rather than treated as device absence.
