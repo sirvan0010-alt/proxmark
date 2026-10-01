@@ -234,3 +234,16 @@ CI caught and prompted fixes to an inherited serial command transport compile de
 ### mDNS desktop integration
 
 The Windows BWM/Wireless tab now exposes a **Discover (mDNS)** action. It searches for `_proxmark5._tcp.local`, lists discovered service instances and fills host/port only after the user selects a result. It never auto-connects. No results or multicast errors leave manual IP/port entry available and are not interpreted as proof that the device is absent. Windows desktop build/CI and physical network discovery verification remain pending.
+
+## CI results — run 36937145061
+
+- Upstream evidence gate: PASS.
+- Evidence/claim audit: PASS.
+- Ubuntu build + tests: PASS.
+- Windows build + tests: PASS.
+- Windows desktop restore: PASS.
+- Windows single-file publish: FAILED due to an inherited invalid C# character literal in MainForm2; corrected afterward.
+- mDNS parser unit tests were included and passed in this run.
+- Desktop mDNS UI integration was added after this run and remains unverified by CI.
+
+A new full run is required before merging PR #13.
