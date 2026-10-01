@@ -286,3 +286,9 @@ CI run 36937392072 passed Ubuntu build/tests and Windows build/tests, but Window
 5. Only after recovery/package verification, revisit firmware update controls.
 
 This is the current authoritative plan for future agents.
+
+## Read-only bootloader Device Info foundation — 2026-10-02
+
+Added `Pm3OldFrameCodec` for fixed 544-byte OLD frames and `Pm5BootloaderDeviceInfo` for `CMD_DEVICE_INFO` flag/baud interpretation. The BWM stream flag is bit 9 in `arg[0]`; `arg[2]` is the probed BWM baud (zero means no ESP answered). Model property `BwmBootloaderBridgeReady` requires both the bootrom flag and a nonzero BWM baud. It does not imply that the Wi-Fi/TCP or BLE network link is connected.
+
+Unit tests cover little-endian frame layout, fixed payload size, truncation, flag presence/absence and BWM baud zero/nonzero. No serial/network transport or firmware write is included in this phase.
