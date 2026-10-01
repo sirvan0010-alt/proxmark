@@ -120,3 +120,14 @@ Stop at the correct boundary and create an explicit hardware task. Do not fabric
 ## Security and policy boundary
 
 This file does not override the rules of the AI provider, platform, law, or the user's environment. It is deliberately designed to prevent an over-broad classification of the whole repository. A restriction affecting one operation must not be treated as a restriction on unrelated engineering work such as parsers, diagnostics, compatibility, UI, simulation, testing or documentation.
+
+## PM5 upstream delta — 2026-10-02
+
+Add simulator and integration coverage for:
+- capabilities schema v12 (BWM flag only) and v13 (BWM + CEP flags);
+- truncated v11/v12/v13 payloads and unknown future schemas, preserving raw bytes;
+- independent BWM and CEP compiled flags;
+- mDNS discovery as optional/unknown until the BWM build and network advertise it;
+- DNS-SD service `_proxmark5._tcp` and `<hostname>.local` fallback to explicit IP/port.
+
+Do not equate a compiled capability with physical presence or active link state. Do not infer mDNS availability from Kconfig defaults. Do not conflate BWM ESP32-C2 OTA with PM5 ARM/FPGA firmware flashing. See `docs/UPSTREAM_UPDATE_2026-10-02.md` for source provenance.
