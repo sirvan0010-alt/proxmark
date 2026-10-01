@@ -296,7 +296,7 @@ Before continuing implementation, read [docs/MASTER_PLAN_2026-10-02.md](docs/MAS
 
 ## Upstream synchronization — 2026-10-02
 
-The current source snapshot is [docs/UPSTREAM_UPDATE_2026-10-02.md](docs/UPSTREAM_UPDATE_2026-10-02.md). The Proxmark3 upstream capability schema is v13: v12 adds `compiled_with_bwm`, v13 adds `compiled_with_cep`. The decoder accepts known versions through v13 and preserves raw payloads for unknown/truncated versions.
+The current source snapshot is [docs/UPSTREAM_UPDATE_2026-10-02.md](docs/UPSTREAM_UPDATE_2026-10-02.md). The Proxmark3 upstream capability schema is v13: v12 adds `compiled_with_bwm`, v13 adds `compiled_with_cep`. These are packed bool bitfields sharing byte 17 with `em_allocated` (bits 0/1/2); v12/v13 payload length remains 18 bytes. The decoder accepts known versions through v13 and preserves raw payloads for unknown/truncated versions.
 
 The BWM ESP32 upstream now includes optional mDNS (commit `b450b1336dfe00fb507efb535ff3d8a1d9d036a9`): `<hostname>.local` and `_proxmark5._tcp`; Kconfig defaults the option on, but installed binary configuration remains unknown. Do not claim the user's board has mDNS until observed.
 
