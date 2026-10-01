@@ -122,3 +122,14 @@ Keep these paths separate:
 - BWM recovery: physical 5-pin header + esptool.
 
 The BWM ESP OTA image guard also checks app signature `0xABCD5432` at offset `0x20`, in addition to ESP magic `0xE9` and chip ID `0x000C`. It sends up to 240 bytes per chunk, paces writes and retries the entire transfer because resume is unsupported. Never treat a lost END acknowledgement as a definite failed flash; reconnect and check the BWM version before retrying.
+
+## DNS-SD discovery implementation — 2026-10-02
+
+Implemented Core class `Pm5MdnsDiscovery` with:
+- PTR query for `_proxmark5._tcp.local`;
+- IPv4 multicast group `224.0.0.251:5353`;
+- compressed DNS-name parsing;
+- PTR/SRV/TXT/A/AAAA records;
+- returned hostname, port and discovered IP addresses.
+
+Unit tests use a synthetic compressed mDNS response. CI and real PM5+BWM network verification remain pending. If discovery returns no result, keep the device state UNKNOWN and allow manual IP/port connection.
