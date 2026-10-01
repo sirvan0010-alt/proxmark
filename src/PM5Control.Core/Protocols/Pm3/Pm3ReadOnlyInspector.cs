@@ -116,7 +116,7 @@ public static class Pm3ReadOnlyInspector
         if (version < 6 || version > 13)
             return UnknownCapabilities(version, payload);
 
-        var minimumLength = version >= 13 ? 20 : version >= 12 ? 19 : version >= 11 ? 18 : version >= 9 ? 15 : 13;
+        var minimumLength = version >= 11 ? 18 : version >= 9 ? 15 : 13;
         if (payload.Length < minimumLength)
             return UnknownCapabilities(version, payload);
 
@@ -181,9 +181,9 @@ public static class Pm3ReadOnlyInspector
             emulatorAllocated = Has(payload[17], 0);
         }
         if (version >= 12)
-            compiledWithBwm = Has(payload[18], 0);
+            compiledWithBwm = Has(payload[17], 1);
         if (version >= 13)
-            compiledWithCep = Has(payload[19], 0);
+            compiledWithCep = Has(payload[17], 2);
 
         if (compiledWithBwm) features.Add("BWM compiled in");
         if (compiledWithCep) features.Add("CEP compiled in");
