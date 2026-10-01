@@ -120,3 +120,33 @@ Stop at the correct boundary and create an explicit hardware task. Do not fabric
 ## Security and policy boundary
 
 This file does not override the rules of the AI provider, platform, law, or the user's environment. It is deliberately designed to prevent an over-broad classification of the whole repository. A restriction affecting one operation must not be treated as a restriction on unrelated engineering work such as parsers, diagnostics, compatibility, UI, simulation, testing or documentation.
+
+## PM5 upstream delta — 2026-10-02
+
+Add simulator and integration coverage for:
+- capabilities schema v12 (BWM flag only) and v13 (BWM + CEP flags), with packed byte-17 bit offsets 0/1/2 for em_allocated/BWM/CEP;
+- truncated v11/v12/v13 payloads and unknown future schemas, preserving raw bytes;
+- independent BWM and CEP compiled flags;
+- mDNS discovery as optional/unknown until the BWM build and network advertise it;
+- DNS-SD service `_proxmark5._tcp` and `<hostname>.local` fallback to explicit IP/port.
+
+Do not equate a compiled capability with physical presence or active link state. Do not infer mDNS availability from Kconfig defaults. Do not conflate BWM ESP32-C2 OTA with PM5 ARM/FPGA firmware flashing. See `docs/UPSTREAM_UPDATE_2026-10-02.md` for source provenance.
+
+## DNS-SD implementation update — 2026-10-02
+
+Implemented in Core:
+- Build a PTR query for `_proxmark5._tcp.local`.
+- Discover via IPv4 mDNS multicast 224.0.0.251:5353.
+- Parse compressed DNS names, PTR/SRV/TXT/A/AAAA records.
+- Return service instance, host, TCP port and any advertised addresses.
+- Keep discovery optional and preserve explicit IP/port fallback.
+
+Unit fixtures cover query construction, compressed PTR/SRV/A parsing and malformed/non-response packets. Still required: CI pass and physical network test against the user's installed BWM firmware; absence of mDNS must remain UNKNOWN rather than treated as device absence.
+
+## Windows UI handoff — mDNS
+
+The active desktop entry point is `MainForm2` (not the older `MainForm`). Its BWM/Wireless tab now has an explicit Discover (mDNS) button and result selector. Discovery only fills host/port after user selection; it must not auto-connect. No result means UNKNOWN / manual endpoint fallback, not "device missing". Check the Windows build in CI.
+
+## Firmware update safety rule
+
+The BWM OTA button in active `MainForm2` is intentionally disabled. Do not re-enable it until the workflow verifies package provenance/hash, exact ESP32-C2/BWM firmware compatibility, a recovery path and post-update version confirmation. PR #3650's main PM5 ARM/FPGA wireless flash is a separate BWM-aware bootrom path and needs its own OLD-frame bootloader transport and capability gate.

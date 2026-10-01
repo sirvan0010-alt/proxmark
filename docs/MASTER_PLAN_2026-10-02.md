@@ -57,7 +57,7 @@ The following is the repository-level baseline recovered from recent work. Statu
 
 ### 4.2 Recorded upstream commits / PRs
 
-- `RfidResearchGroup/proxmark3` PR #3650, merge commit `2630310336c28fd04b4b11aea8e77a7895a55de9` (reported 2026-09-27): BWM firmware flashing over Wi-Fi. Verify exact semantics against current source before implementing; do not assume this is the main AT32 PM5 firmware flasher.
+- `RfidResearchGroup/proxmark3` PR #3650, merge commit `2630310336c28fd04b4b11aea8e77a7895a55de9`: **main PM5 firmware flashing over a BWM wireless stream via a BWM-aware bootrom**. It adds a BWM bootrom UART4 bridge, bootloader capability flag checks, and host flashing over wireless `tcp:`, `udp:` or `bt:` transports. It is not the ESP32-C2 BWM OTA path. A bootrom without `DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM` is rejected before any writes; upstream says flash a BWM-capable bootrom over USB once, then wireless flashing may be attempted.
 - CEP timer/main-loop fix: `f1cb4952086861f2e27c89fddf0d274269cff9d6`.
 - CEP SPI1 reply-corruption fix: `e6d7cd1f9d330b930073f32cda06e308774cd36d`.
 - BWM ESP32 repository BLE bulk-transfer fix: `4818511a2b179c61f80f54b5f825428cba51deb8` (2026-09-14 baseline; re-check whether newer commits exist).
@@ -73,7 +73,9 @@ Current upstream changelog and command reference include:
 - `hw bwm wifipower`: Wi-Fi modem off and power-save mode.
 - `hw bwm powersave`: ESP32 power-save settings.
 - `hw bwm wifi`: Wi-Fi STA + TCP server management.
-- `hw bwm upgrade`: ESP32 firmware update over an existing BWM link.
+- `hw bwm upgrade`: ESP32-C2 BWM firmware update over an existing BWM app_com link; distinct from PM5 ARM/FPGA flashing.
+- PR #3650 adds main PM5 firmware flashing over a BWM-aware bootrom's wireless byte stream; the bootrom must advertise `DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM` and wireless flashing must be refused otherwise.
+- BWM master commit `b450b133...` adds optional mDNS (`<hostname>.local`, `_proxmark5._tcp`) with a Kconfig default of enabled; installed binary support remains unknown.
 - Battery/charger telemetry and configurable charger operations require careful per-command verification; mutating charger operations must not be exposed as routine safe diagnostics.
 - Bulk BLE/Wi-Fi transfer pacing does not prove real-time LF/COTAG streaming. Track that as a separate transport/data-path item.
 
@@ -102,14 +104,14 @@ Exit condition: reproducible baseline report with unknowns explicitly marked.
 
 Exit condition: one authoritative mainline implementation, no undocumented duplicate branch assumptions.
 
-### P2 — Wi-Fi/BWM upstream synchronization
+### P2 — Wireless firmware paths and BWM OTA audit
 
-1. Inspect PR #3650 and current upstream implementation in full.
-2. Determine whether Wi-Fi OTA is BWM ESP32-C2 OTA over the PM5 app_com link, a new transport mode, or another update path; document exact protocol/actions/chunk sizing/retries/reboot/confirmation.
-3. Compare it line-by-line with `BwmEspFirmwareUpdater` and the existing `WifiTcpTransport`.
-4. Add source-backed tests for chunk boundaries, lost replies, retries, abort, reconnect and post-reboot version check.
-5. Keep BWM OTA separate from main PM5 ARM/FPGA flashing.
-6. Do not run an OTA update on the user's hardware until identity, image source/checksum, compatibility, backup/recovery and explicit confirmation are established.
+1. Keep three distinct paths: (a) PM5 ARM/FPGA flash through the BWM-aware bootrom over TCP/UDP/BLE, (b) BWM ESP32-C2 OTA through `CMD_PM5_BWM_ESP_OTA`, and (c) recovery through the physical 5-pin ESP header/esptool.
+2. Inspect PR #3650's bootrom and host-flasher changes; identify the bootrom `DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM` gate and the USB-only prerequisite for installing a BWM-aware bootrom.
+3. Compare BWM ESP OTA implementation with `BwmEspFirmwareUpdater`, including app signature `0xABCD5432`, 240-byte maximum chunks, write pacing, six whole-image attempts, lost END acknowledgement and post-update reset/version confirmation.
+4. Add source-backed tests for image validation, begin/write/end errors, ambiguous finalization and retry policy.
+5. Design a separate legacy bootloader/OLD-frame transport for wireless PM5 flashing; do not reuse the PM3-NG-only `WifiTcpTransport` without protocol proof.
+6. Do not execute any firmware write on the user's hardware until exact hardware/bootrom identity, trusted image/checksum, compatibility, recovery path and explicit confirmation are established.
 
 Exit condition: documented protocol equivalence or explicit incompatibility; no guessed OTA implementation.
 
@@ -198,7 +200,58 @@ For every continuation:
 ## 8. Immediate next actions
 
 1. Reconcile PR #10 against current main.
-2. Verify the current implementation against upstream Wi-Fi OTA PR #3650.
+2. Audit PR #3650's BWM-aware bootrom wireless flashing separately from ESP32-C2 BWM OTA.
 3. Refresh the BWM upstream snapshot and command/capability registry, including BLE pairing, auto-off and power-save additions.
 4. Complete the physical PM5/BWM identity and read-only diagnostic baseline.
 5. Expand transport fault tests and end-to-end report export.
+
+## Execution update — 2026-10-02
+
+### Completed in current integration branch
+- PR #12 (master plan consolidation) merged to main as `8241ad702d3fe5206920f3e8b3efb4583ba2d9fe`.
+- Selectively ported PM5 capabilities schema v12/v13 decoder changes from the diverged PR #10 branch.
+- Added BWM/CEP capability model and source-backed CEP handshake/length-prefix model.
+- Added tests for v12/v13 flags, truncated and unknown payloads, independent capability gating and CEP frame prefix.
+- Updated compatibility registries and upstream snapshot with the latest inspected BWM mDNS commit `b450b1336dfe00fb507efb535ff3d8a1d9d036a9` and Proxmark3 client commit `256f30f0fa7cb2fe84588f3d7ceb5eb3571a3363`.
+
+### Newly discovered upstream delta
+BWM firmware now has an optional mDNS responder (Kconfig default enabled) publishing `<hostname>.local` and `_proxmark5._tcp`. The PM5 usage guide still claims no mDNS; that guide is stale relative to the BWM firmware commit. Control Center should implement optional DNS-SD discovery but retain IP/port fallback. Do not claim the user's installed BWM image has mDNS until observed.
+
+### Remaining in this integration
+- Run GitHub Actions and resolve any compile/test failures.
+- Reconcile docs and compatibility with current source.
+- Open a replacement PR from current main; close stale PR #10 only after the replacement contains all intended changes.
+- Keep physical hardware validation read-only; no firmware writes are part of this phase.
+
+## mDNS implementation update — 2026-10-02
+
+Core now contains `Pm5MdnsDiscovery`: PTR query for `_proxmark5._tcp.local`, IPv4 multicast discovery, compressed DNS name parsing, PTR/SRV/TXT/A/AAAA extraction, and result objects with hostname/port/addresses. Unit tests cover query shape, compressed PTR/SRV/A records and malformed/non-response packets. CI and physical PM5/BWM network verification remain pending. Manual IP/port entry remains the fallback; no mDNS response must never be interpreted as proof that the PM5 is absent.
+
+## CI audit — 2026-10-02
+
+CI caught and prompted fixes to an inherited serial command transport compile defect and two incorrect pre-existing test fixtures (BWM OTA chunk command count; PM3 response frame overhead at the BWM 2048-byte fragmentation boundary). The BWM abort CRC golden vector was aligned to upstream's low-byte-first CRC serialization. The follow-up CI run is still required to validate the current head, including mDNS tests.
+
+### mDNS desktop integration
+
+The Windows BWM/Wireless tab now exposes a **Discover (mDNS)** action. It searches for `_proxmark5._tcp.local`, lists discovered service instances and fills host/port only after the user selects a result. It never auto-connects. No results or multicast errors leave manual IP/port entry available and are not interpreted as proof that the device is absent. Windows desktop build/CI and physical network discovery verification remain pending.
+
+## CI results — run 36937145061
+
+- Upstream evidence gate: PASS.
+- Evidence/claim audit: PASS.
+- Ubuntu build + tests: PASS.
+- Windows build + tests: PASS.
+- Windows desktop restore: PASS.
+- Windows single-file publish: FAILED due to an inherited invalid C# character literal in MainForm2; corrected afterward.
+- mDNS parser unit tests were included and passed in this run.
+- Desktop mDNS UI integration was added after this run and remains unverified by CI.
+
+A new full run is required before merging PR #13.
+
+### Firmware update controls remain gated
+
+The Windows UI now keeps the BWM ESP32-C2 OTA button disabled. The protocol updater is source-audited and unit-tested, but the app does not yet enforce a trusted firmware package/checksum, exact device/firmware compatibility, a verified recovery path and post-update attestation. Main PM5 ARM/FPGA wireless flashing through the BWM-aware bootrom is a separate feature and is not yet implemented in the Control Center.
+
+## Windows BLE API compatibility fix
+
+CI run 36937392072 passed Ubuntu build/tests and Windows build/tests, but Windows single-file publish failed on unsupported `GattCharacteristic.Dispose()` and `MaxWriteValueSize` API assumptions. Removed characteristic disposal and changed write chunking to the guaranteed 20-byte default ATT payload. Negotiated MTU support remains a later optimisation. The latest head needs a fresh Windows publish before merge.

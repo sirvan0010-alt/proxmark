@@ -98,3 +98,38 @@ New upstream delta to review:
 - The upstream README still warns that PM5 firmware is unstable and says not to install the BWM addon board for now. Preserve an already-installed user-reported working module, but do not turn that report into a general stable-install recommendation.
 
 Next mini-plan work: source-diff PR #3650; compare updater; refresh BWM capability model; add fault tests; then await physical read-only validation. No firmware write is authorized by this documentation update.
+
+## Upstream delta — 2026-10-02
+
+BWM ESP32 latest inspected commit is now `b450b1336dfe00fb507efb535ff3d8a1d9d036a9` (merge PR #7, mDNS support), not the older `4818511...` BLE bulk-transfer baseline. The newer commit adds `components/app_wifi_mdns`, optional Kconfig `CONFIG_PM5_MDNS_ENABLE` (default y), `<hostname>.local` announcements and `_proxmark5._tcp` DNS-SD service on the TCP server port. The PM3 host client adds an mDNS connection hint in `256f30f...`.
+
+Caution: the current PM5 BWM usage guide still says there is no mDNS responder; it is stale relative to the current BWM repository source. Build-time config may disable the feature, so the user's installed image must be queried/observed before displaying it as available.
+
+Next mini-plan:
+1. Add DNS-SD discovery in Control Center with manual IP/port fallback.
+2. Expose mDNS as `UNKNOWN` until the device/network actually advertises the service.
+3. Add tests for service filtering, empty/invalid TXT records, duplicate results, expiry and unavailable mDNS.
+4. Keep BWM OTA and main PM5 ARM/FPGA flashing completely separate.
+5. Run CI and prepare the read-only hardware baseline; no flashing in this mini-plan.
+
+## Important correction — PR #3650 (2026-10-02)
+
+PR #3650 is **main PM5 firmware flashing over a BWM wireless link using a BWM-aware bootrom**, not ESP32-C2 BWM OTA. It adds a polled UART4/app_com bridge in the bootrom, reports `DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM`, and the host flasher supports `tcp:`, `udp:` and `bt:` while refusing writes if the bootrom lacks that flag. Upstream says a BWM-capable bootrom must first be flashed over USB. Our `WifiTcpTransport` is a PM3-NG runtime transport and is not yet a bootloader OLD-frame transport.
+
+Keep these paths separate:
+- PM5 ARM/FPGA flash: BWM-aware bootrom wireless stream (PR #3650).
+- BWM ESP32-C2 OTA: `CMD_PM5_BWM_ESP_OTA` over the existing BWM app_com link.
+- BWM recovery: physical 5-pin header + esptool.
+
+The BWM ESP OTA image guard also checks app signature `0xABCD5432` at offset `0x20`, in addition to ESP magic `0xE9` and chip ID `0x000C`. It sends up to 240 bytes per chunk, paces writes and retries the entire transfer because resume is unsupported. Never treat a lost END acknowledgement as a definite failed flash; reconnect and check the BWM version before retrying.
+
+## DNS-SD discovery implementation — 2026-10-02
+
+Implemented Core class `Pm5MdnsDiscovery` with:
+- PTR query for `_proxmark5._tcp.local`;
+- IPv4 multicast group `224.0.0.251:5353`;
+- compressed DNS-name parsing;
+- PTR/SRV/TXT/A/AAAA records;
+- returned hostname, port and discovered IP addresses.
+
+Unit tests use a synthetic compressed mDNS response. CI and real PM5+BWM network verification remain pending. If discovery returns no result, keep the device state UNKNOWN and allow manual IP/port connection.

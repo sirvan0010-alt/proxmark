@@ -136,3 +136,40 @@ A release is not considered hardware-compatible merely because it builds success
 ## Consolidated plan (2026-10-02)
 
 The authoritative cross-session plan is now [docs/MASTER_PLAN_2026-10-02.md](MASTER_PLAN_2026-10-02.md). It consolidates current implementation status, PR/branch reconciliation, upstream BWM/CEP work, physical hardware gates, transport testing, safe firmware management and AI-agent handoff. Keep this roadmap and the BWM mini-plan synchronized with the master plan. The roadmap's historical phase checkboxes must not be interpreted as proof of physical PM5 verification.
+
+## Upstream integration update — 2026-10-02
+
+- [x] Decode PM5 capabilities schema v13 (unit tests pending CI).
+- [x] Represent BWM and CEP as independent compile-time capabilities.
+- [x] Add source-backed CEP handshake/length-prefix model; no direct-PC transport claim.
+- [x] Record current BWM ESP32 mDNS source support and optional DNS-SD discovery requirement.
+- [ ] Implement and test DNS-SD discovery with manual IP/port fallback.
+- [ ] Verify mDNS, BLE and Wi-Fi behaviour on the user's physical PM5/BWM.
+
+See [UPSTREAM_UPDATE_2026-10-02.md](UPSTREAM_UPDATE_2026-10-02.md). Source-level support is not physical-device verification.
+
+## Wireless firmware path clarification — 2026-10-02
+
+PR #3650 adds main PM5 ARM/FPGA firmware flashing over a BWM wireless stream through a BWM-aware bootrom. This is separate from ESP32-C2 BWM OTA (`CMD_PM5_BWM_ESP_OTA`) and physical ESP32 recovery. The Control Center does not yet implement the legacy bootloader/OLD-frame wireless flash transport. Before implementing, require the bootrom capability flag `DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM`, exact image compatibility, trusted image checksums and a recovery plan.
+
+## mDNS discovery implementation — 2026-10-02
+
+- [x] Add DNS-SD PTR query for `_proxmark5._tcp.local`.
+- [x] Add IPv4 mDNS multicast discovery and DNS compressed-name parser.
+- [x] Parse PTR/SRV/TXT/A/AAAA records and preserve hostname/port/address.
+- [x] Add unit fixtures for compressed records and malformed packets.
+- [ ] CI pass for the discovery implementation.
+- [ ] Verify discovery on the user's PM5/BWM network; retain manual IP/port fallback.
+
+## Desktop mDNS discovery
+
+- [x] Add a manual **Discover (mDNS)** action to the BWM/Wireless tab.
+- [x] List discovered PM5 service instances and fill host/port only after user selection.
+- [x] Do not auto-connect; retain manual IP/port fallback.
+- [ ] Confirm Windows desktop build in CI and test on the user's network.
+
+## Firmware write safety
+
+- [x] Keep BWM ESP32-C2 OTA disabled in the UI until package provenance, compatibility and recovery checks are implemented.
+- [ ] Implement separate BWM-aware bootrom transport for PM5 ARM/FPGA wireless flashing.
+- [ ] Only enable firmware writes after trusted package verification, exact target identification, recovery plan and explicit user confirmation.

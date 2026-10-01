@@ -6,10 +6,10 @@ namespace PM5Control.Core.Tests;
 public sealed class Pm3NgFrameTests
 {
     [Fact]
-    public void DecodeCapabilities_Version11DecodesPm5AndAppendedFields()
+    public void DecodeCapabilities_Version13DecodesPm5BwmCepAndAppendedFields()
     {
         var payload = new byte[18];
-        payload[0] = 11; // current CAPABILITIES_VERSION per upstream pm3_cmd.h
+        payload[0] = 13; // current CAPABILITIES_VERSION per upstream pm3_cmd.h
         BinaryPrimitives.WriteUInt32LittleEndian(payload.AsSpan(1, 4), 460800);
         BinaryPrimitives.WriteUInt32LittleEndian(payload.AsSpan(5, 4), 65536);
         payload[9] = 0x80; // LF
@@ -18,12 +18,12 @@ public sealed class Pm3NgFrameTests
         payload[12] = 0b_0001_0010; // is_rdv4 (bit 1) + is_pm5 (bit 4)
         BinaryPrimitives.WriteUInt16LittleEndian(payload.AsSpan(13, 2), 4064); // max_cmd_data_size, v9+
         BinaryPrimitives.WriteUInt16LittleEndian(payload.AsSpan(15, 2), 8192); // em_size, v11+
-        payload[17] = 0x01; // em_allocated
+        payload[17] = 0b_0000_0111; // packed bitfields: em_allocated, compiled_with_bwm, compiled_with_cep
 
         var report = Pm3ReadOnlyInspector.DecodeCapabilities(payload);
 
         Assert.True(report.IsKnownSchema);
-        Assert.Equal(11, report.SchemaVersion);
+        Assert.Equal(13, report.SchemaVersion);
         Assert.True(report.IsRdv4);
         Assert.True(report.IsPm5);
         Assert.False(report.IsPm5StandardAntenna);
@@ -32,30 +32,54 @@ public sealed class Pm3NgFrameTests
         Assert.Equal((ushort)4064, report.MaxCommandDataSize);
         Assert.Equal((ushort)8192, report.EmulatorSize);
         Assert.True(report.EmulatorAllocated);
+        Assert.True(report.CompiledWithBwm);
+        Assert.True(report.CompiledWithCep);
         Assert.Equal(
-            new[] { "LF support", "Hitag", "ISO14443-A", "ISO15693", "iCLASS", "RDV4 hardware", "PM5 hardware" },
+            new[] { "LF support", "Hitag", "ISO14443-A", "ISO15693", "iCLASS", "RDV4 hardware", "PM5 hardware", "BWM compiled in", "CEP compiled in" },
             report.EnabledFeatures);
+    }
+
+    [Fact]
+    public void DecodeCapabilities_Version12DecodesBwmAndLeavesCepAbsent()
+    {
+        var payload = new byte[18];
+        payload[0] = 12;
+        payload[17] = 0b_0000_0011; // em_allocated + compiled_with_bwm; CEP not present in v12
+
+        var report = Pm3ReadOnlyInspector.DecodeCapabilities(payload);
+
+        Assert.True(report.IsKnownSchema);
+        Assert.True(report.CompiledWithBwm);
+        Assert.False(report.CompiledWithCep);
     }
 
     [Fact]
     public void DecodeCapabilities_UnknownSchemaDoesNotGuess()
     {
-        var report = Pm3ReadOnlyInspector.DecodeCapabilities(new byte[] { 12, 0, 0, 0 });
+        var report = Pm3ReadOnlyInspector.DecodeCapabilities(new byte[] { 14, 0, 0, 0 });
 
         Assert.False(report.IsKnownSchema);
         Assert.False(report.IsRdv4);
         Assert.False(report.IsPm5);
         Assert.Empty(report.EnabledFeatures);
+        Assert.Equal(new byte[] { 14, 0, 0, 0 }, report.RawPayload);
     }
 
-    [Fact]
-    public void DecodeCapabilities_RejectsKnownVersionWithTruncatedPayload()
+    [Theory]
+    [InlineData(11, 17)]
+    [InlineData(12, 17)]
+    [InlineData(13, 17)]
+    public void DecodeCapabilities_RejectsKnownVersionWithTruncatedPayload(byte version, int payloadLength)
     {
-        var report = Pm3ReadOnlyInspector.DecodeCapabilities(new byte[] { 11, 0, 0, 0 });
+        var payload = new byte[payloadLength];
+        payload[0] = version;
+
+        var report = Pm3ReadOnlyInspector.DecodeCapabilities(payload);
 
         Assert.False(report.IsKnownSchema);
-        Assert.Equal(11, report.SchemaVersion);
+        Assert.Equal(version, report.SchemaVersion);
         Assert.Empty(report.EnabledFeatures);
+        Assert.Equal(payload, report.RawPayload);
     }
 
     [Fact]

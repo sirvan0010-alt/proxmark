@@ -72,3 +72,13 @@ Additional upstream command families to track in RRG `proxmark3`:
 - Wi-Fi BWM OTA / `hw bwm upgrade`: verify exact path and protocol before adapting.
 
 Track each as source-versioned capability. Read-only status may be integrated after protocol review; state-changing settings remain gated behind explicit user confirmation. Bulk BLE/Wi-Fi pacing is not evidence of real-time LF/COTAG support.
+
+## Update — 2026-10-02
+
+Latest inspected revisions:
+- `RfidResearchGroup/proxmark3`: `256f30f0fa7cb2fe84588f3d7ceb5eb3571a3363`.
+- `RfidResearchGroup/Proxmark5_BWM_esp32`: `b450b1336dfe00fb507efb535ff3d8a1d9d036a9`.
+
+New BWM item: optional mDNS responder, Kconfig `CONFIG_PM5_MDNS_ENABLE` default `y`, announces `<hostname>.local` and `_proxmark5._tcp` for the TCP server. Add DNS-SD discovery as an optional path in Control Center; always retain manual IP/port fallback. The current PM5 usage guide still says there is no mDNS, so document this source discrepancy and do not infer installed-firmware support.
+
+The PM3 host client has a new mDNS connection hint in commit `256f30f...`. Also continue tracking CEP timer/SPI fixes, BWM OTA, BLE pairing, auto-off, Wi-Fi power-save and ESP32 power-save.

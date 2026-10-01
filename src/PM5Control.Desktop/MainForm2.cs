@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using PM5Control.Core.Bwm;
 using PM5Control.Core.Connections;
+using PM5Control.Core.Discovery;
 using PM5Control.Core.Protocols.Pm3;
 
 namespace PM5Control.Desktop;
@@ -24,7 +25,8 @@ internal sealed class MainForm2 : Form
     private readonly ComboBox _wirelessTransport=new(), _bleDevice=new();
     private readonly TextBox _wifiHost=new(), _wifiPort=new();
     private readonly Label _wirelessStatus=ValueLabel();
-    private readonly Button _wirelessConnect=new(), _wirelessDiag=new(), _otaButton=new();
+    private readonly Button _wirelessConnect=new(), _wirelessDiag=new(), _otaButton=new(), _wifiDiscover=new();
+    private readonly ComboBox _wifiDiscovered=new();
     private IPm3CommandTransport? _wirelessCommandTransport;
     private IAsyncDisposable? _wirelessDisposable;
     private readonly CheckBox _developer=new(),_raw=new(),_timestamps=new();
@@ -53,12 +55,64 @@ internal sealed class MainForm2 : Form
         root.Controls.Add(new Label{Text="Wi-Fi host / IP",ForeColor=Muted,Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleLeft},0,2);_wifiHost.Text="Proxmark5";_wifiHost.Width=300;root.Controls.Add(_wifiHost,1,2);
         root.Controls.Add(new Label{Text="TCP port",ForeColor=Muted,Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleLeft},0,3);_wifiPort.Text="7777";_wifiPort.Width=100;root.Controls.Add(_wifiPort,1,3);
         root.Controls.Add(new Label{Text="BLE device",ForeColor=Muted,Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleLeft},0,4);_bleDevice.DropDownStyle=ComboBoxStyle.DropDownList;_bleDevice.Width=420;root.Controls.Add(_bleDevice,1,4);
-        var actions=new FlowLayoutPanel{Dock=DockStyle.Fill,AutoSize=true,BackColor=Bg};_wirelessConnect.Text="Connect";_wirelessConnect.AutoSize=true;_wirelessConnect.Click+=async(_,_)=>await ConnectWirelessAsync();var scan=new Button{Text="Scan BLE",AutoSize=true};scan.Click+=async(_,_)=>await ScanBleAsync();_wirelessDiag.Text="BWM version/status";_wirelessDiag.AutoSize=true;_wirelessDiag.Click+=async(_,_)=>await WirelessDiagnosticAsync();_otaButton.Text="BWM OTA…";_otaButton.AutoSize=true;_otaButton.Click+=async(_,_)=>await RunBwmOtaAsync();actions.Controls.Add(_wirelessConnect);actions.Controls.Add(scan);actions.Controls.Add(_wirelessDiag);actions.Controls.Add(_otaButton);root.Controls.Add(actions,1,5);
-        var info=new Label{Dock=DockStyle.Fill,ForeColor=Muted,Text="Protocol support: PM3-NG over native BWM Wi-Fi/TCP and BWM BLE SPP. OTA accepts only ESP32-C2 images (magic 0xE9, chip 0x000C). Physical end-to-end verification is tracked separately.",Padding=new Padding(0,10,0,0)};root.Controls.Add(info,1,6);
+        root.Controls.Add(new Label{Text="Find PM5 on Wi-Fi",ForeColor=Muted,Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleLeft},0,5);
+        var discovery=new FlowLayoutPanel{Dock=DockStyle.Fill,AutoSize=true,BackColor=Bg};
+        _wifiDiscover.Text="Discover (mDNS)";_wifiDiscover.AutoSize=true;_wifiDiscover.Click+=async(_,_)=>await DiscoverWifiAsync();
+        _wifiDiscovered.DropDownStyle=ComboBoxStyle.DropDownList;_wifiDiscovered.Width=420;_wifiDiscovered.DisplayMember=nameof(Pm5MdnsService.InstanceName);
+        _wifiDiscovered.SelectedIndexChanged+=(_,_)=>ApplyDiscoveredWifiEndpoint();
+        discovery.Controls.Add(_wifiDiscover);discovery.Controls.Add(_wifiDiscovered);root.Controls.Add(discovery,1,5);
+        var actions=new FlowLayoutPanel{Dock=DockStyle.Fill,AutoSize=true,BackColor=Bg};_wirelessConnect.Text="Connect";_wirelessConnect.AutoSize=true;_wirelessConnect.Click+=async(_,_)=>await ConnectWirelessAsync();var scan=new Button{Text="Scan BLE",AutoSize=true};scan.Click+=async(_,_)=>await ScanBleAsync();_wirelessDiag.Text="BWM version/status";_wirelessDiag.AutoSize=true;_wirelessDiag.Click+=async(_,_)=>await WirelessDiagnosticAsync();_otaButton.Text="BWM OTA (gated)";_otaButton.AutoSize=true;_otaButton.Click+=async(_,_)=>await RunBwmOtaAsync();actions.Controls.Add(_wirelessConnect);actions.Controls.Add(scan);actions.Controls.Add(_wirelessDiag);actions.Controls.Add(_otaButton);root.Controls.Add(actions,1,6);
+        var info=new Label{Dock=DockStyle.Fill,ForeColor=Muted,Text="Protocol support: PM3-NG over BWM Wi-Fi/TCP and BLE SPP. BWM ESP32-C2 OTA is gated until trusted package, exact device/version and recovery checks are complete. Main PM5 ARM/FPGA wireless flashing uses a separate BWM-aware bootrom path and is not yet enabled here.",Padding=new Padding(0,10,0,0)};root.Controls.Add(info,1,7);
         p.Controls.Add(root);UpdateWirelessEditors();SetWirelessButtonState(false);return p;
     }
 
-    private void UpdateWirelessEditors(){var wifi=string.Equals(_wirelessTransport.Text,"Wi-Fi / TCP",StringComparison.Ordinal);_wifiHost.Enabled=wifi;_wifiPort.Enabled=wifi;_bleDevice.Enabled=!wifi;_otaButton.Enabled=true;}
+    private void UpdateWirelessEditors(){var wifi=string.Equals(_wirelessTransport.Text,"Wi-Fi / TCP",StringComparison.Ordinal);_wifiHost.Enabled=wifi;_wifiPort.Enabled=wifi;_wifiDiscover.Enabled=wifi;_wifiDiscovered.Enabled=wifi;_bleDevice.Enabled=!wifi;_otaButton.Enabled=false;}
+
+    private async Task DiscoverWifiAsync()
+    {
+        _wifiDiscover.Enabled=false;
+        _wifiDiscovered.Items.Clear();
+        _wirelessStatus.Text="Searching for PM5 BWM via mDNS…";
+        try
+        {
+            var services=await Pm5MdnsDiscovery.DiscoverAsync(TimeSpan.FromSeconds(3));
+            foreach(var service in services)_wifiDiscovered.Items.Add(service);
+            if(services.Count>0)
+            {
+                _wirelessStatus.Text=$"mDNS found {services.Count} PM5 service(s)";
+                _wifiDiscovered.SelectedIndex=0;
+                Log(_consoleLog,$"mDNS found {services.Count} PM5 service(s). Select a result to fill host/port; connection is not automatic.");
+                foreach(var service in services)
+                {
+                    var address=service.Addresses.FirstOrDefault()?.ToString()??service.HostName;
+                    Log(_diagLog,$"mDNS: {service.InstanceName} -> {address}:{service.Port} ({service.HostName})");
+                }
+            }
+            else
+            {
+                _wirelessStatus.Text="No mDNS result · manual IP/port still available";
+                Log(_consoleLog,"No PM5 mDNS result. This does not prove the device is absent: mDNS may be disabled or multicast filtered. Enter the IP/hostname and TCP port manually.");
+            }
+        }
+        catch(Exception ex)
+        {
+            _wirelessStatus.Text="mDNS discovery unavailable · manual IP/port still available";
+            Log(_consoleLog,$"mDNS discovery failed: {ex.Message}. Manual IP/port remains available.");
+        }
+        finally
+        {
+            _wifiDiscover.Enabled=string.Equals(_wirelessTransport.Text,"Wi-Fi / TCP",StringComparison.Ordinal);
+        }
+    }
+
+    private void ApplyDiscoveredWifiEndpoint()
+    {
+        if(_wifiDiscovered.SelectedItem is not Pm5MdnsService service)return;
+        _wifiHost.Text=service.Addresses.FirstOrDefault()?.ToString()??service.HostName;
+        _wifiPort.Text=service.Port.ToString();
+        _wirelessStatus.Text=$"mDNS endpoint selected · {service.HostName}:{service.Port}";
+        Log(_consoleLog,$"Selected mDNS endpoint {service.InstanceName}: {_wifiHost.Text}:{_wifiPort.Text}. Press Connect when ready.");
+    }
 
     private async Task ScanBleAsync()
     {
@@ -95,7 +149,7 @@ internal sealed class MainForm2 : Form
         try
         {
             var v=await _wirelessCommandTransport.SendCommandAsync(Pm3CommandCode.Pm5BwmEspOta,new[]{BwmEspFirmwareUpdater.ActionVersion});
-            Log(_consoleLog,$"BWM ESP version: {(v.Response.Status==0?System.Text.Encoding.UTF8.GetString(v.Response.Payload).TrimEnd('\\0'):"ERROR status="+v.Response.Status)}");
+            Log(_consoleLog,$"BWM ESP version: {(v.Response.Status==0?System.Text.Encoding.UTF8.GetString(v.Response.Payload).TrimEnd('\0'):"ERROR status="+v.Response.Status)}");
             var status=await _wirelessCommandTransport.SendCommandAsync(Pm3CommandCode.Status);
             Log(_consoleLog,$"PM3 status: status={status.Response.Status}, reason={status.Response.Reason}, payload={status.Response.Payload.Length} bytes.");
         }
@@ -117,7 +171,7 @@ internal sealed class MainForm2 : Form
     }
 
     private async Task DisconnectWirelessAsync(){if(_wirelessDisposable is not null){try{await _wirelessDisposable.DisposeAsync();}catch{}}_wirelessDisposable=null;_wirelessCommandTransport=null;_wirelessStatus.Text="Wireless transport not connected";SetWirelessButtonState(false);}
-    private void SetWirelessButtonState(bool connected){_wirelessDiag.Enabled=connected;_otaButton.Enabled=connected;}
+    private void SetWirelessButtonState(bool connected){_wirelessDiag.Enabled=connected;_otaButton.Enabled=false;}
 
     private TabPage BuildDiagnosticsTab(){var p=Page("DIAGNOSTICS");var info=new Label{Dock=DockStyle.Top,Height=42,Text="Developer/raw transport view. Interleaved frames, TX/RX, timeout and response matching are shown here.",Padding=new Padding(18,12,18,4),ForeColor=Muted};p.Controls.Add(info);ConfigureLog(_diagLog);p.Controls.Add(_diagLog);return p;}
     private TabPage BuildSettingsTab(){var p=Page("SETTINGS");var g=new TableLayoutPanel{Dock=DockStyle.Top,ColumnCount=2,RowCount=6,Padding=new Padding(24),Height=240,BackColor=Bg};g.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,260));g.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));g.Controls.Add(new Label{Text="COM port",ForeColor=Muted,Dock=DockStyle.Fill},0,0);g.Controls.Add(new Label{Text="Auto-detect (COM3 preferred)",ForeColor=TextColor,Dock=DockStyle.Fill},1,0);g.Controls.Add(new Label{Text="Baudrate",ForeColor=Muted,Dock=DockStyle.Fill},0,1);g.Controls.Add(new Label{Text="460800",ForeColor=TextColor,Dock=DockStyle.Fill},1,1);_developer.Text="Developer mode";_developer.Checked=true;_raw.Text="Show raw frames";_raw.Checked=true;_timestamps.Text="Show timestamps";_timestamps.Checked=true;g.Controls.Add(_developer,0,2);g.Controls.Add(_raw,0,3);g.Controls.Add(_timestamps,0,4);g.Controls.Add(new Label{Text="Safety: READ-ONLY · write/reset/flash disabled",ForeColor=Green,Dock=DockStyle.Fill},1,3);p.Controls.Add(g);return p;}

@@ -280,3 +280,13 @@ The desktop executable shell is now in the repository and CI is configured to pr
 - [Roadmap](docs/ROADMAP.md) — milestone overview.
 - [AI continuation tasks](docs/AI_TASKS.md) and [AI context](AI_CONTEXT.md) — instructions for future coding assistants.
 - [BWM synchronization mini-plan](docs/PM5_BWM_SYNC_MINIPLAN_2026-09-28.md) — fast-moving BLE/Wi-Fi/ESP32-C2 work.
+
+## Current upstream snapshot
+
+- [PM5 upstream integration — 2026-10-02](docs/UPSTREAM_UPDATE_2026-10-02.md)
+- [BWM compatibility evidence](compatibility/bwm.json)
+- [Firmware compatibility registry](compatibility/firmware.json)
+
+The BWM ESP32 firmware now has optional mDNS/DNS-SD source support; whether it is enabled in a particular installed image remains to be detected.
+
+The Core also supports optional DNS-SD discovery of BWM-enabled PM5 devices via `_proxmark5._tcp.local`; manual IP/port remains available when mDNS is disabled or filtered by the network.
