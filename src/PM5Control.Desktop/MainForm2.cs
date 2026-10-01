@@ -149,7 +149,7 @@ internal sealed class MainForm2 : Form
         try
         {
             var v=await _wirelessCommandTransport.SendCommandAsync(Pm3CommandCode.Pm5BwmEspOta,new[]{BwmEspFirmwareUpdater.ActionVersion});
-            Log(_consoleLog,$"BWM ESP version: {(v.Response.Status==0?System.Text.Encoding.UTF8.GetString(v.Response.Payload).TrimEnd('\\0'):"ERROR status="+v.Response.Status)}");
+            Log(_consoleLog,$"BWM ESP version: {(v.Response.Status==0?System.Text.Encoding.UTF8.GetString(v.Response.Payload).TrimEnd('\0'):"ERROR status="+v.Response.Status)}");
             var status=await _wirelessCommandTransport.SendCommandAsync(Pm3CommandCode.Status);
             Log(_consoleLog,$"PM3 status: status={status.Response.Status}, reason={status.Response.Reason}, payload={status.Response.Payload.Length} bytes.");
         }
