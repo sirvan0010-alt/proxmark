@@ -75,3 +75,16 @@ The upstream Proxmark5 README still states that PM5 firmware is actively develop
 - Physical PM5/BWM/Flipper verification: not performed by this repository.
 
 Research date: 2026-10-02.
+
+## Bootloader Device Info and BWM stream capability
+
+Upstream `include/pm3_cmd.h` defines OLD frames as fixed 544-byte packets: 8-byte command, three 8-byte arguments, and a 512-byte data area. OLD frames have no NG magic/CRC and remain pinned to the 512-byte payload independently of `PM3_CMD_DATA_SIZE`.
+
+The bootloader `CMD_DEVICE_INFO` command is `0x0000`. Its OLD response uses:
+- `arg[0]`: device-info flags;
+- `arg[1]`: device-info protocol version (the BWM-aware bootrom currently replies with 1);
+- `arg[2]`: BWM bridge baud selected by the bootrom, or zero if no ESP answered.
+
+`DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM` is bit 9 (`1 << 9`). This indicates the bootrom can de-frame BWM DATA_FORWARD as a byte stream, including OLD commands spanning BWM frames. A nonzero BWM baud additionally indicates that an ESP answered the bootrom probe. Neither value proves that Wi-Fi/TCP or BLE is currently connected.
+
+The Control Center now has a fixed-size OLD frame codec and a read-only Device Info model. It does not send any flash command, and it does not yet implement the bootloader transport.
