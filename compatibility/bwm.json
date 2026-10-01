@@ -1,19 +1,25 @@
 {
   "schemaVersion": 4,
-  "lastChecked": "2026-09-28",
+  "lastChecked": "2026-10-02",
   "component": "PM5 BWM / ESP32 subsystem",
   "status": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
   "upstream": {
     "repository": "RfidResearchGroup/Proxmark5_BWM_esp32",
     "branch": "master",
-    "commit": "4818511a2b179c61f80f54b5f825428cba51deb8",
-    "researchDate": "2026-09-28",
-    "previousBaseline": "e0c4982800eb7d1ca16045631f3460f9f176427c",
-    "latestChange": "BLE bulk-transfer retry pacing fix remains latest BWM/ESP32 repository change; current proxmark3 upstream additionally exposes native PM5 Wi-Fi TCP and BWM ESP OTA over the PM3 command link.",
-    "ciStatus": "NOT_RECORDED",
+    "commit": "b450b1336dfe00fb507efb535ff3d8a1d9d036a9",
+    "researchDate": "2026-10-02",
+    "previousBaseline": "4818511a2b179c61f80f54b5f825428cba51deb8",
+    "latestChange": "BWM repo adds optional mDNS responder; default-enabled Kconfig option publishes <hostname>.local and _proxmark5._tcp for the Wi-Fi TCP server. Earlier BLE bulk-transfer retry fix remains in the history.",
+    "ciStatus": "NOT_RECORDED_FOR_EXACT_COMMIT",
     "previousCiStatus": "SUCCESS",
     "previousCiCommit": "e0c4982800eb7d1ca16045631f3460f9f176427c",
-    "ciMeaning": "CI build/package success is evidence of firmware buildability only; it is not physical hardware verification."
+    "ciMeaning": "CI build/package success is evidence of firmware buildability only; it is not physical hardware verification.",
+    "mainProxmarkCommit": "256f30f0fa7cb2fe84588f3d7ceb5eb3571a3363",
+    "capabilitiesVersion": 13,
+    "capabilityFlags": {
+      "bwmVersion": 12,
+      "cepVersion": 13
+    }
   },
   "deviceModel": {
     "value": "0xDA10",
@@ -26,7 +32,10 @@
     "uartRxBufferBytes": 4096,
     "bleRetryDelayMs": 10,
     "confidence": "SOURCE_REPORTED",
-    "source": "RfidResearchGroup/Proxmark5_BWM_esp32 DEV.md and commit 4818511a2b179c61f80f54b5f825428cba51deb8"
+    "source": "RfidResearchGroup/Proxmark5_BWM_esp32 DEV.md and commit 4818511a2b179c61f80f54b5f825428cba51deb8",
+    "mdnsService": "_proxmark5._tcp",
+    "mdnsHostname": "<device-identifier>.local",
+    "mdnsBuildFlag": "CONFIG_PM5_MDNS_ENABLE (Kconfig default y; build may override)"
   },
   "capabilities": {
     "ble": "SOURCE_DOCUMENTED_NOT_HARDWARE_VERIFIED",
@@ -36,13 +45,19 @@
     "tcpUdpMqttForwarding": "SOURCE_DOCUMENTED_NOT_HARDWARE_VERIFIED",
     "ota": "SOURCE_VERIFIED_PROTOCOL_NOT_HARDWARE_VERIFIED",
     "batteryFuelGauge": "SOURCE_HARDWARE_DESIGN_NOT_HARDWARE_VERIFIED",
-    "batteryTelemetry": "UNKNOWN_UNTIL_EXPOSED_BY_CONNECTED_FIRMWARE"
+    "batteryTelemetry": "UNKNOWN_UNTIL_EXPOSED_BY_CONNECTED_FIRMWARE",
+    "bleSettings": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
+    "wifiPowerSave": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
+    "pm5IdlePowerSave": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
+    "autoOff": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
+    "mdns": "SOURCE_VERIFIED_OPTIONAL_DEFAULT_ON_NOT_HARDWARE_VERIFIED",
+    "cep": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED"
   },
   "chargerPolicy": {
     "automaticConfiguration": "DISABLED",
     "reason": "No verified PM5+BWM charger-register write/readback path has been established on physical hardware.",
     "note": "The Control Center must not silently apply a guessed charge-voltage target. Battery chemistry and production charge limits remain hardware/pack specific."
   },
-  "evidenceRule": "Upstream source and CI evidence must never be promoted to HARDWARE_VERIFIED without reproducible observation on a physical PM5+BWM unit.",
+  "evidenceRule": "Upstream source and CI evidence must never be promoted to HARDWARE_VERIFIED without reproducible observation on a physical PM5+BWM unit. The mDNS option being default-enabled in Kconfig does not prove it is enabled in the user's installed binary.",
   "integrationPolicy": "Control Center now implements native PM5 Wi-Fi/TCP PM3-NG transport and the source-verified BWM ESP32-C2 OTA command protocol. Physical end-to-end verification remains separate. Do not label the wireless stack stable/production-ready."
 }
