@@ -35,10 +35,11 @@ public sealed record Pm5TransportCapabilities(
         uint bigBufferSize,
         ushort maxCommandDataSize)
     {
-        var bwm = schemaVersion >= 12
+        var knownSchema = schemaVersion is >= 12 and <= 13;
+        var bwm = knownSchema
             ? (compiledWithBwm ? Pm5CapabilityState.Compiled : Pm5CapabilityState.NotCompiled)
             : Pm5CapabilityState.Unknown;
-        var cep = schemaVersion >= 13
+        var cep = schemaVersion == 13
             ? (compiledWithCep ? Pm5CapabilityState.Compiled : Pm5CapabilityState.NotCompiled)
             : Pm5CapabilityState.Unknown;
 
