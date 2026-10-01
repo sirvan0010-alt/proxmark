@@ -45,9 +45,10 @@ public sealed class BwmPm3ForwardedResponseParserTests
         Pm3NgResponse? received = null;
         parser.ResponseReceived += response => received = response;
 
+        // The PM3 response frame includes 12 bytes of header/postamble, so
+        // a 4064-byte payload totals 4076 bytes and fits in two 2048-byte BWM chunks.
         parser.Append(new BwmFrame(BwmFrameKind.Broadcast, (ushort)BwmBroadcastType.DataForward, pm3[..2048]));
-        parser.Append(new BwmFrame(BwmFrameKind.Broadcast, (ushort)BwmBroadcastType.DataForward, pm3[2048..4096]));
-        parser.Append(new BwmFrame(BwmFrameKind.Broadcast, (ushort)BwmBroadcastType.DataForward, pm3[4096..]));
+        parser.Append(new BwmFrame(BwmFrameKind.Broadcast, (ushort)BwmBroadcastType.DataForward, pm3[2048..]));
 
         Assert.NotNull(received);
         Assert.Equal(Pm3NgFrame.MaxPayload, received!.Payload.Length);
