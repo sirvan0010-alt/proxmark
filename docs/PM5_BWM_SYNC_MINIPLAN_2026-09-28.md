@@ -98,3 +98,16 @@ New upstream delta to review:
 - The upstream README still warns that PM5 firmware is unstable and says not to install the BWM addon board for now. Preserve an already-installed user-reported working module, but do not turn that report into a general stable-install recommendation.
 
 Next mini-plan work: source-diff PR #3650; compare updater; refresh BWM capability model; add fault tests; then await physical read-only validation. No firmware write is authorized by this documentation update.
+
+## Upstream delta — 2026-10-02
+
+BWM ESP32 latest inspected commit is now `b450b1336dfe00fb507efb535ff3d8a1d9d036a9` (merge PR #7, mDNS support), not the older `4818511...` BLE bulk-transfer baseline. The newer commit adds `components/app_wifi_mdns`, optional Kconfig `CONFIG_PM5_MDNS_ENABLE` (default y), `<hostname>.local` announcements and `_proxmark5._tcp` DNS-SD service on the TCP server port. The PM3 host client adds an mDNS connection hint in `256f30f...`.
+
+Caution: the current PM5 BWM usage guide still says there is no mDNS responder; it is stale relative to the current BWM repository source. Build-time config may disable the feature, so the user's installed image must be queried/observed before displaying it as available.
+
+Next mini-plan:
+1. Add DNS-SD discovery in Control Center with manual IP/port fallback.
+2. Expose mDNS as `UNKNOWN` until the device/network actually advertises the service.
+3. Add tests for service filtering, empty/invalid TXT records, duplicate results, expiry and unavailable mDNS.
+4. Keep BWM OTA and main PM5 ARM/FPGA flashing completely separate.
+5. Run CI and prepare the read-only hardware baseline; no flashing in this mini-plan.
