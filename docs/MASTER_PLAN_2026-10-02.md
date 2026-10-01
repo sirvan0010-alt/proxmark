@@ -230,3 +230,7 @@ Core now contains `Pm5MdnsDiscovery`: PTR query for `_proxmark5._tcp.local`, IPv
 ## CI audit — 2026-10-02
 
 CI caught and prompted fixes to an inherited serial command transport compile defect and two incorrect pre-existing test fixtures (BWM OTA chunk command count; PM3 response frame overhead at the BWM 2048-byte fragmentation boundary). The BWM abort CRC golden vector was aligned to upstream's low-byte-first CRC serialization. The follow-up CI run is still required to validate the current head, including mDNS tests.
+
+### mDNS desktop integration
+
+The Windows BWM/Wireless tab now exposes a **Discover (mDNS)** action. It searches for `_proxmark5._tcp.local`, lists discovered service instances and fills host/port only after the user selects a result. It never auto-connects. No results or multicast errors leave manual IP/port entry available and are not interpreted as proof that the device is absent. Windows desktop build/CI and physical network discovery verification remain pending.
