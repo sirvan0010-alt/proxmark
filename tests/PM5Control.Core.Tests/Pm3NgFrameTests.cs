@@ -8,7 +8,7 @@ public sealed class Pm3NgFrameTests
     [Fact]
     public void DecodeCapabilities_Version13DecodesPm5BwmCepAndAppendedFields()
     {
-        var payload = new byte[20];
+        var payload = new byte[18];
         payload[0] = 13; // current CAPABILITIES_VERSION per upstream pm3_cmd.h
         BinaryPrimitives.WriteUInt32LittleEndian(payload.AsSpan(1, 4), 460800);
         BinaryPrimitives.WriteUInt32LittleEndian(payload.AsSpan(5, 4), 65536);
@@ -18,9 +18,7 @@ public sealed class Pm3NgFrameTests
         payload[12] = 0b_0001_0010; // is_rdv4 (bit 1) + is_pm5 (bit 4)
         BinaryPrimitives.WriteUInt16LittleEndian(payload.AsSpan(13, 2), 4064); // max_cmd_data_size, v9+
         BinaryPrimitives.WriteUInt16LittleEndian(payload.AsSpan(15, 2), 8192); // em_size, v11+
-        payload[17] = 0x01; // em_allocated
-        payload[18] = 0x01; // compiled_with_bwm
-        payload[19] = 0x01; // compiled_with_cep
+        payload[17] = 0b_0000_0111; // packed bitfields: em_allocated, compiled_with_bwm, compiled_with_cep
 
         var report = Pm3ReadOnlyInspector.DecodeCapabilities(payload);
 
@@ -44,9 +42,9 @@ public sealed class Pm3NgFrameTests
     [Fact]
     public void DecodeCapabilities_Version12DecodesBwmAndLeavesCepAbsent()
     {
-        var payload = new byte[19];
+        var payload = new byte[18];
         payload[0] = 12;
-        payload[18] = 0x01;
+        payload[17] = 0b_0000_0011; // em_allocated + compiled_with_bwm; CEP not present in v12
 
         var report = Pm3ReadOnlyInspector.DecodeCapabilities(payload);
 
@@ -69,8 +67,8 @@ public sealed class Pm3NgFrameTests
 
     [Theory]
     [InlineData(11, 17)]
-    [InlineData(12, 18)]
-    [InlineData(13, 19)]
+    [InlineData(12, 17)]
+    [InlineData(13, 17)]
     public void DecodeCapabilities_RejectsKnownVersionWithTruncatedPayload(byte version, int payloadLength)
     {
         var payload = new byte[payloadLength];
