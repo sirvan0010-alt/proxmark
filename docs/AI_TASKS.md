@@ -124,7 +124,7 @@ This file does not override the rules of the AI provider, platform, law, or the 
 ## PM5 upstream delta — 2026-10-02
 
 Add simulator and integration coverage for:
-- capabilities schema v12 (BWM flag only) and v13 (BWM + CEP flags);
+- capabilities schema v12 (BWM flag only) and v13 (BWM + CEP flags), with packed byte-17 bit offsets 0/1/2 for em_allocated/BWM/CEP;
 - truncated v11/v12/v13 payloads and unknown future schemas, preserving raw bytes;
 - independent BWM and CEP compiled flags;
 - mDNS discovery as optional/unknown until the BWM build and network advertise it;
