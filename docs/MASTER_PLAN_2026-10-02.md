@@ -202,3 +202,21 @@ For every continuation:
 3. Refresh the BWM upstream snapshot and command/capability registry, including BLE pairing, auto-off and power-save additions.
 4. Complete the physical PM5/BWM identity and read-only diagnostic baseline.
 5. Expand transport fault tests and end-to-end report export.
+
+## Execution update — 2026-10-02
+
+### Completed in current integration branch
+- PR #12 (master plan consolidation) merged to main as `8241ad702d3fe5206920f3e8b3efb4583ba2d9fe`.
+- Selectively ported PM5 capabilities schema v12/v13 decoder changes from the diverged PR #10 branch.
+- Added BWM/CEP capability model and source-backed CEP handshake/length-prefix model.
+- Added tests for v12/v13 flags, truncated and unknown payloads, independent capability gating and CEP frame prefix.
+- Updated compatibility registries and upstream snapshot with the latest inspected BWM mDNS commit `b450b1336dfe00fb507efb535ff3d8a1d9d036a9` and Proxmark3 client commit `256f30f0fa7cb2fe84588f3d7ceb5eb3571a3363`.
+
+### Newly discovered upstream delta
+BWM firmware now has an optional mDNS responder (Kconfig default enabled) publishing `<hostname>.local` and `_proxmark5._tcp`. The PM5 usage guide still claims no mDNS; that guide is stale relative to the BWM firmware commit. Control Center should implement optional DNS-SD discovery but retain IP/port fallback. Do not claim the user's installed BWM image has mDNS until observed.
+
+### Remaining in this integration
+- Run GitHub Actions and resolve any compile/test failures.
+- Reconcile docs and compatibility with current source.
+- Open a replacement PR from current main; close stale PR #10 only after the replacement contains all intended changes.
+- Keep physical hardware validation read-only; no firmware writes are part of this phase.
