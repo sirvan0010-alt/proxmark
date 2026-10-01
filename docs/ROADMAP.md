@@ -160,3 +160,10 @@ PR #3650 adds main PM5 ARM/FPGA firmware flashing over a BWM wireless stream thr
 - [x] Add unit fixtures for compressed records and malformed packets.
 - [ ] CI pass for the discovery implementation.
 - [ ] Verify discovery on the user's PM5/BWM network; retain manual IP/port fallback.
+
+## Desktop mDNS discovery
+
+- [x] Add a manual **Discover (mDNS)** action to the BWM/Wireless tab.
+- [x] List discovered PM5 service instances and fill host/port only after user selection.
+- [x] Do not auto-connect; retain manual IP/port fallback.
+- [ ] Confirm Windows desktop build in CI and test on the user's network.
