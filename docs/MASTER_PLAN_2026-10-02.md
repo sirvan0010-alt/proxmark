@@ -247,3 +247,7 @@ The Windows BWM/Wireless tab now exposes a **Discover (mDNS)** action. It search
 - Desktop mDNS UI integration was added after this run and remains unverified by CI.
 
 A new full run is required before merging PR #13.
+
+### Firmware update controls remain gated
+
+The Windows UI now keeps the BWM ESP32-C2 OTA button disabled. The protocol updater is source-audited and unit-tested, but the app does not yet enforce a trusted firmware package/checksum, exact device/firmware compatibility, a verified recovery path and post-update attestation. Main PM5 ARM/FPGA wireless flashing through the BWM-aware bootrom is a separate feature and is not yet implemented in the Control Center.
