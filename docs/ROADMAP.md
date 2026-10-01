@@ -173,3 +173,18 @@ PR #3650 adds main PM5 ARM/FPGA firmware flashing over a BWM wireless stream thr
 - [x] Keep BWM ESP32-C2 OTA disabled in the UI until package provenance, compatibility and recovery checks are implemented.
 - [ ] Implement separate BWM-aware bootrom transport for PM5 ARM/FPGA wireless flashing.
 - [ ] Only enable firmware writes after trusted package verification, exact target identification, recovery plan and explicit user confirmation.
+
+## Mainline checkpoint — 2026-10-02
+
+- [x] Merge consolidated master plan / AI handoff (PR #12).
+- [x] Merge capabilities v13 + CEP + BWM/mDNS integration (PR #13).
+- [x] Pass Ubuntu and Windows Release build/test jobs.
+- [x] Pass Windows self-contained desktop publish.
+- [x] Add user-triggered mDNS discovery to active MainForm2; no auto-connect.
+- [x] Keep BWM OTA disabled pending trusted package and recovery checks.
+- [ ] Read-only physical PM5/BWM baseline.
+- [ ] Read-only bootloader Device Info parser and BWM-stream capability detection.
+- [ ] Separate BWM-aware bootloader/OLD-frame wireless transport.
+- [ ] Physical mDNS/BLE/Wi-Fi validation.
+
+See the final integration section in `docs/MASTER_PLAN_2026-10-02.md`.
