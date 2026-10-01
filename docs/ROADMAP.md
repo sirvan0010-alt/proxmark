@@ -188,3 +188,13 @@ PR #3650 adds main PM5 ARM/FPGA firmware flashing over a BWM wireless stream thr
 - [ ] Physical mDNS/BLE/Wi-Fi validation.
 
 See the final integration section in `docs/MASTER_PLAN_2026-10-02.md`.
+
+## Bootloader Device Info foundation
+
+- [x] Add fixed-size OLD frame codec and tests.
+- [x] Parse `CMD_DEVICE_INFO` flags and BWM baud without write commands.
+- [x] Distinguish BWM-capable bootrom from a responding ESP bridge.
+- [ ] Add serial/stream read-only bootloader transport.
+- [ ] Add BWM DATA_FORWARD wrapper and response reassembly.
+- [ ] Verify actual bootrom flags and BWM baud on physical hardware.
+- [ ] Implement main PM5 wireless flash only after transport, package and recovery gates.
