@@ -79,6 +79,7 @@ internal sealed class MainForm2 : Form
             foreach(var service in services)_wifiDiscovered.Items.Add(service);
             if(services.Count>0)
             {
+                _wirelessStatus.Text=$"mDNS found {services.Count} PM5 service(s)";
                 _wifiDiscovered.SelectedIndex=0;
                 Log(_consoleLog,$"mDNS found {services.Count} PM5 service(s). Select a result to fill host/port; connection is not automatic.");
                 foreach(var service in services)
@@ -109,6 +110,7 @@ internal sealed class MainForm2 : Form
         if(_wifiDiscovered.SelectedItem is not Pm5MdnsService service)return;
         _wifiHost.Text=service.Addresses.FirstOrDefault()?.ToString()??service.HostName;
         _wifiPort.Text=service.Port.ToString();
+        _wirelessStatus.Text=$"mDNS endpoint selected · {service.HostName}:{service.Port}";
         Log(_consoleLog,$"Selected mDNS endpoint {service.InstanceName}: {_wifiHost.Text}:{_wifiPort.Text}. Press Connect when ready.");
     }
 
