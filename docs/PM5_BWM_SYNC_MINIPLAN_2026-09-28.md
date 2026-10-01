@@ -84,3 +84,17 @@ For each new upstream transport/BWM change:
 ## 5. Stop condition
 
 This mini-plan does not replace the main roadmap. The currently implementable software delta is covered by Wi-Fi/TCP, generic command transport, BWM OTA, desktop wireless UI, evidence/provenance and protocol tests. Remaining items are physical verification and the separate realtime streaming path. Future upstream commits reopen only the affected item.
+
+
+## Addendum — 2026-10-02
+
+The consolidated authoritative plan is [MASTER_PLAN_2026-10-02.md](MASTER_PLAN_2026-10-02.md). Do not interpret the existing IMPLEMENTED labels as physical hardware verification.
+
+New upstream delta to review:
+
+- RRG `proxmark3` PR #3650 / merge commit `2630310336c28fd04b4b11aea8e77a7895a55de9`: BWM firmware flashing over Wi-Fi. Compare exact protocol and semantics with `BwmEspFirmwareUpdater`; distinguish ESP32-C2 BWM OTA from PM5 ARM/FPGA firmware flashing.
+- Current changelog adds BWM BLE pairing/passkey and bond management, TX power, Wi-Fi modem power-save, ESP32 power-save, and optional idle auto-off controls. Refresh command/capability provenance and add read-only diagnostics where supported.
+- CEP fixes `f1cb4952086861f2e27c89fddf0d274269cff9d6` and `e6d7cd1f9d330b930073f32cda06e308774cd36d` remain relevant to compatibility and regression tests.
+- The upstream README still warns that PM5 firmware is unstable and says not to install the BWM addon board for now. Preserve an already-installed user-reported working module, but do not turn that report into a general stable-install recommendation.
+
+Next mini-plan work: source-diff PR #3650; compare updater; refresh BWM capability model; add fault tests; then await physical read-only validation. No firmware write is authorized by this documentation update.

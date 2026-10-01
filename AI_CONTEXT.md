@@ -288,3 +288,8 @@ Do not fill these unknowns with guesses.
 ## DEFINITION OF SUCCESS
 
 The project succeeds when a user can connect a Proxmark5 and obtain a trustworthy human-readable and machine-readable description of the actual device without knowing Proxmark CLI commands, understand how that hardware differs from PM3/reference profiles, see why a firmware candidate is compatible or not, and later use the same client to control supported functionality.
+
+
+## AUTHORITATIVE CURRENT PLAN — 2026-10-02
+
+Before continuing implementation, read [docs/MASTER_PLAN_2026-10-02.md](docs/MASTER_PLAN_2026-10-02.md). It is the consolidated current handoff for the recent PM5 Control Center discussions and takes precedence where older status notes or dated mini-plans conflict. Preserve the distinction between user-reported working BWM hardware, source/protocol support, and independently hardware-verified behaviour. Do not remove an already-installed working module solely due to the upstream general warning, but do not recommend new installations or firmware flashing as stable. Reconcile PR #10 and stale PR #9 against current main before assuming their contents are integrated. Verify upstream PR #3650's exact BWM Wi-Fi OTA semantics before changing the updater.

@@ -131,3 +131,8 @@ Every release should state:
 - upstream commit/date used for compatibility research
 
 A release is not considered hardware-compatible merely because it builds successfully.
+
+
+## Consolidated plan (2026-10-02)
+
+The authoritative cross-session plan is now [docs/MASTER_PLAN_2026-10-02.md](MASTER_PLAN_2026-10-02.md). It consolidates current implementation status, PR/branch reconciliation, upstream BWM/CEP work, physical hardware gates, transport testing, safe firmware management and AI-agent handoff. Keep this roadmap and the BWM mini-plan synchronized with the master plan. The roadmap's historical phase checkboxes must not be interpreted as proof of physical PM5 verification.

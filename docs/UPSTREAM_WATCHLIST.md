@@ -57,3 +57,18 @@ When a Proxmark check/update is requested:
 9. Run CI after integrated changes.
 
 Open-source research is used as upstream/reference knowledge, not as unattributed copying. Adapted functionality must retain required license notices and source attribution.
+
+
+## Update — 2026-10-02
+
+See [MASTER_PLAN_2026-10-02.md](MASTER_PLAN_2026-10-02.md) for the current prioritized integration plan and exact known commit/PR provenance.
+
+Additional upstream command families to track in RRG `proxmark3`:
+
+- `hw bwm ble`: BLE radio state, pairing/passkey, bonded-device management and TX power.
+- `hw bwm autooff`: optional idle power-off and unplug policy.
+- `hw bwm wifipower`: Wi-Fi radio/power-save controls.
+- `hw bwm powersave`: ESP32 power-save policy.
+- Wi-Fi BWM OTA / `hw bwm upgrade`: verify exact path and protocol before adapting.
+
+Track each as source-versioned capability. Read-only status may be integrated after protocol review; state-changing settings remain gated behind explicit user confirmation. Bulk BLE/Wi-Fi pacing is not evidence of real-time LF/COTAG support.
