@@ -61,13 +61,13 @@ public sealed class Pm3SerialTransport : IAsyncDisposable, IPm3ReadOnlyTransport
         await port.BaseStream.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<Pm3NgExchange> SendReadOnlyAsync(ushort command, CancellationToken cancellationToken = default)
+    public async Task<Pm3NgExchange> SendCommandAsync(ushort command, ReadOnlyMemory<byte> payload = default, CancellationToken cancellationToken = default)
     {
         if (!IsConnected) throw new InvalidOperationException("PM3 serial transport is not connected.");
 
         var port = _port!;
         port.DiscardInBuffer();
-        var request = Pm3NgFrame.EncodeCommand(command);
+        var request = Pm3NgFrame.EncodeCommand(command, payload.Span);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(_timeoutMs);
 
