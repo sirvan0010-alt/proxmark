@@ -56,6 +56,23 @@ public sealed class Pm5TransportCapabilitiesTests
     }
 
     [Fact]
+    public void UnknownFutureSchemaDoesNotInferBwmOrCep()
+    {
+        var caps = Pm5TransportCapabilities.FromCapabilities(
+            schemaVersion: 14,
+            viaUsb: true,
+            compiledWithBwm: false,
+            compiledWithCep: false,
+            bigBufferSize: 1,
+            maxCommandDataSize: 512);
+
+        Assert.Equal(Pm5CapabilityState.Unknown, caps.Bwm);
+        Assert.Equal(Pm5CapabilityState.Unknown, caps.Cep);
+        Assert.Equal(Pm5CapabilityState.Unknown, caps.BleForwarding);
+        Assert.Equal(Pm5CapabilityState.Unknown, caps.WifiForwarding);
+    }
+
+    [Fact]
     public void Schema13CanReportBwmNotCompiled()
     {
         var caps = Pm5TransportCapabilities.FromCapabilities(
