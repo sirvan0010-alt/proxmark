@@ -28,6 +28,9 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport, IPm3Read
     public const ushort BatteryServiceUuid16 = 0x180F;
     public const ushort BatteryCharacteristicUuid16 = 0x2A19;
     private const int TimeoutMs = 3000;
+    // Windows GATT does not expose MaxWriteValueSize on GattCharacteristic.
+    // Use the guaranteed default ATT MTU payload until GattSession MTU negotiation is modelled.
+    private const int DefaultAttWritePayloadBytes = 20;
     private const int MaxUnmatchedResponses = 32;
 
     private static readonly Guid SppServiceUuid = BluetoothUuid(SppServiceUuid16);
@@ -106,7 +109,6 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport, IPm3Read
         if (status != GattCommunicationStatus.Success)
         {
             characteristic.ValueChanged -= OnValueChanged;
-            characteristic.Dispose();
             throw new InvalidOperationException($"Could not enable PM5 BWM BLE notifications; status={status}.");
         }
         _characteristic = characteristic;
@@ -177,8 +179,7 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport, IPm3Read
     private async Task WriteChunkedAsync(byte[] data, CancellationToken cancellationToken)
     {
         var characteristic = _characteristic ?? throw new InvalidOperationException("BLE characteristic is unavailable.");
-        var chunkSize = characteristic.MaxWriteValueSize;
-        if (chunkSize <= 0) chunkSize = 20;
+        var chunkSize = DefaultAttWritePayloadBytes;
         for (var offset = 0; offset < data.Length; offset += chunkSize)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -257,7 +258,6 @@ internal sealed class WindowsBleProxmarkTransport : IProxmarkTransport, IPm3Read
         {
             try { await characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.None); } catch { }
             characteristic.ValueChanged -= OnValueChanged;
-            characteristic.Dispose();
         }
         _characteristic = null;
         _notificationsEnabled = false;
