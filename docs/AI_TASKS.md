@@ -142,3 +142,7 @@ Implemented in Core:
 - Keep discovery optional and preserve explicit IP/port fallback.
 
 Unit fixtures cover query construction, compressed PTR/SRV/A parsing and malformed/non-response packets. Still required: CI pass and physical network test against the user's installed BWM firmware; absence of mDNS must remain UNKNOWN rather than treated as device absence.
+
+## Windows UI handoff — mDNS
+
+The active desktop entry point is `MainForm2` (not the older `MainForm`). Its BWM/Wireless tab now has an explicit Discover (mDNS) button and result selector. Discovery only fills host/port after user selection; it must not auto-connect. No result means UNKNOWN / manual endpoint fallback, not "device missing". Check the Windows build in CI.
