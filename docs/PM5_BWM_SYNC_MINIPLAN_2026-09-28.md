@@ -111,3 +111,14 @@ Next mini-plan:
 3. Add tests for service filtering, empty/invalid TXT records, duplicate results, expiry and unavailable mDNS.
 4. Keep BWM OTA and main PM5 ARM/FPGA flashing completely separate.
 5. Run CI and prepare the read-only hardware baseline; no flashing in this mini-plan.
+
+## Important correction — PR #3650 (2026-10-02)
+
+PR #3650 is **main PM5 firmware flashing over a BWM wireless link using a BWM-aware bootrom**, not ESP32-C2 BWM OTA. It adds a polled UART4/app_com bridge in the bootrom, reports `DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM`, and the host flasher supports `tcp:`, `udp:` and `bt:` while refusing writes if the bootrom lacks that flag. Upstream says a BWM-capable bootrom must first be flashed over USB. Our `WifiTcpTransport` is a PM3-NG runtime transport and is not yet a bootloader OLD-frame transport.
+
+Keep these paths separate:
+- PM5 ARM/FPGA flash: BWM-aware bootrom wireless stream (PR #3650).
+- BWM ESP32-C2 OTA: `CMD_PM5_BWM_ESP_OTA` over the existing BWM app_com link.
+- BWM recovery: physical 5-pin header + esptool.
+
+The BWM ESP OTA image guard also checks app signature `0xABCD5432` at offset `0x20`, in addition to ESP magic `0xE9` and chip ID `0x000C`. It sends up to 240 bytes per chunk, paces writes and retries the entire transfer because resume is unsupported. Never treat a lost END acknowledgement as a definite failed flash; reconnect and check the BWM version before retrying.
