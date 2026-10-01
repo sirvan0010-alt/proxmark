@@ -222,3 +222,7 @@ BWM firmware now has an optional mDNS responder (Kconfig default enabled) publis
 - Reconcile docs and compatibility with current source.
 - Open a replacement PR from current main; close stale PR #10 only after the replacement contains all intended changes.
 - Keep physical hardware validation read-only; no firmware writes are part of this phase.
+
+## mDNS implementation update — 2026-10-02
+
+Core now contains `Pm5MdnsDiscovery`: PTR query for `_proxmark5._tcp.local`, IPv4 multicast discovery, compressed DNS name parsing, PTR/SRV/TXT/A/AAAA extraction, and result objects with hostname/port/addresses. Unit tests cover query shape, compressed PTR/SRV/A records and malformed/non-response packets. CI and physical PM5/BWM network verification remain pending. Manual IP/port entry remains the fallback; no mDNS response must never be interpreted as proof that the PM5 is absent.
