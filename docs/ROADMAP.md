@@ -151,3 +151,12 @@ See [UPSTREAM_UPDATE_2026-10-02.md](UPSTREAM_UPDATE_2026-10-02.md). Source-level
 ## Wireless firmware path clarification — 2026-10-02
 
 PR #3650 adds main PM5 ARM/FPGA firmware flashing over a BWM wireless stream through a BWM-aware bootrom. This is separate from ESP32-C2 BWM OTA (`CMD_PM5_BWM_ESP_OTA`) and physical ESP32 recovery. The Control Center does not yet implement the legacy bootloader/OLD-frame wireless flash transport. Before implementing, require the bootrom capability flag `DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM`, exact image compatibility, trusted image checksums and a recovery plan.
+
+## mDNS discovery implementation — 2026-10-02
+
+- [x] Add DNS-SD PTR query for `_proxmark5._tcp.local`.
+- [x] Add IPv4 mDNS multicast discovery and DNS compressed-name parser.
+- [x] Parse PTR/SRV/TXT/A/AAAA records and preserve hostname/port/address.
+- [x] Add unit fixtures for compressed records and malformed packets.
+- [ ] CI pass for the discovery implementation.
+- [ ] Verify discovery on the user's PM5/BWM network; retain manual IP/port fallback.
