@@ -74,7 +74,7 @@ public sealed class Pm5BootloaderDeviceInfoTests
         Assert.True(info.IsInBootromMode);
         Assert.True(info.UnderstandsBwmStream);
         Assert.True(info.BwmModuleResponded);
-        Assert.True(info.CanUseBwmWirelessBootloaderTransport);
+        Assert.True(info.BwmBootloaderBridgeReady);
         Assert.Equal(921600u, info.BwmBaudRate);
     }
 
