@@ -255,3 +255,34 @@ The Windows UI now keeps the BWM ESP32-C2 OTA button disabled. The protocol upda
 ## Windows BLE API compatibility fix
 
 CI run 36937392072 passed Ubuntu build/tests and Windows build/tests, but Windows single-file publish failed on unsupported `GattCharacteristic.Dispose()` and `MaxWriteValueSize` API assumptions. Removed characteristic disposal and changed write chunking to the guaranteed 20-byte default ATT payload. Negotiated MTU support remains a later optimisation. The latest head needs a fresh Windows publish before merge.
+
+## Final integration status — 2026-10-02
+
+### Merged to main
+- PR #12: consolidated master plan and AI handoff — merged.
+- PR #13: capabilities v13, CEP model, BWM OTA safety checks, mDNS Core discovery/UI, Windows transport compatibility fixes and regression tests — merged as `69360c313cf5b68e85262dedc2cff38f90ada47f`.
+- Stale PR #10 was closed as superseded; its relevant changes were selectively ported onto current main.
+
+### Final CI — run 36937595521
+- Upstream Evidence Gate: PASS.
+- Evidence / Claim Audit: PASS.
+- Ubuntu Release build + tests: PASS.
+- Windows Release build + tests: PASS.
+- Windows desktop restore + self-contained single-file publish: PASS.
+- Integration / Release Readiness Gate: PASS.
+
+### Current boundaries
+- Capabilities v12/v13, CEP framing model, BWM mDNS parser and Windows discovery UI are source/unit/CI verified.
+- No physical PM5/BWM/Flipper hardware test was performed.
+- BWM OTA remains disabled in the UI pending trusted package provenance, exact target/version compatibility, recovery procedure and post-update attestation.
+- PR #3650's BWM-aware bootrom path for main PM5 ARM/FPGA wireless flashing is documented but not implemented in this Control Center. A separate legacy bootloader/OLD-frame transport and the bootrom capability flag check are required.
+- mDNS no-result is UNKNOWN, not proof that the PM5 is absent; manual IP/port remains available.
+
+### Next execution order
+1. Prepare and run a read-only PM5/BWM hardware baseline: identity, bootrom/ARM/FPGA/BWM versions, USB/driver, BLE, Wi-Fi/TCP and mDNS.
+2. Add a read-only bootloader Device Info parser and detect `DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM`.
+3. Design the separate BWM-aware bootloader/OLD-frame wireless transport; do not reuse PM3-NG `WifiTcpTransport` without protocol proof.
+4. Verify mDNS and BLE behaviour on the user's physical unit.
+5. Only after recovery/package verification, revisit firmware update controls.
+
+This is the current authoritative plan for future agents.
