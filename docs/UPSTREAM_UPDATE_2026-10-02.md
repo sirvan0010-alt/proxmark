@@ -15,7 +15,7 @@ Current upstream `include/pm3_cmd.h` declares `CAPABILITIES_VERSION 13`:
 - v12: `compiled_with_bwm`
 - v13: `compiled_with_cep`
 
-The Control Center decoder now accepts known schemas 6–13, requires 19 bytes for v12 and 20 bytes for v13, and preserves raw payloads for unsupported/truncated schemas. A BWM or CEP flag means compiled into that ARM firmware; it does not prove that the module/connector is physically present or that the transport is currently connected.
+The Control Center decoder now accepts known schemas 6–13, requires 18 bytes for v11–v13, and preserves raw payloads for unsupported/truncated schemas. In the upstream packed struct, `em_allocated`, `compiled_with_bwm` and `compiled_with_cep` are adjacent one-bit bool fields sharing payload byte 17: bits 0, 1 and 2 respectively. Schema v12/v13 adds meaning to that packed byte without increasing its byte length. The decoder reads BWM from byte 17 bit 1 and CEP from byte 17 bit 2. A BWM or CEP flag means compiled into that ARM firmware; it does not prove that the module/connector is physically present or that the transport is currently connected.
 
 ## CEP and stability fixes
 
