@@ -57,7 +57,7 @@ The following is the repository-level baseline recovered from recent work. Statu
 
 ### 4.2 Recorded upstream commits / PRs
 
-- `RfidResearchGroup/proxmark3` PR #3650, merge commit `2630310336c28fd04b4b11aea8e77a7895a55de9` (reported 2026-09-27): BWM firmware flashing over Wi-Fi. Verify exact semantics against current source before implementing; do not assume this is the main AT32 PM5 firmware flasher.
+- `RfidResearchGroup/proxmark3` PR #3650, merge commit `2630310336c28fd04b4b11aea8e77a7895a55de9`: **main PM5 firmware flashing over a BWM wireless stream via a BWM-aware bootrom**. It adds a BWM bootrom UART4 bridge, bootloader capability flag checks, and host flashing over wireless `tcp:`, `udp:` or `bt:` transports. It is not the ESP32-C2 BWM OTA path. A bootrom without `DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM` is rejected before any writes; upstream says flash a BWM-capable bootrom over USB once, then wireless flashing may be attempted.
 - CEP timer/main-loop fix: `f1cb4952086861f2e27c89fddf0d274269cff9d6`.
 - CEP SPI1 reply-corruption fix: `e6d7cd1f9d330b930073f32cda06e308774cd36d`.
 - BWM ESP32 repository BLE bulk-transfer fix: `4818511a2b179c61f80f54b5f825428cba51deb8` (2026-09-14 baseline; re-check whether newer commits exist).
@@ -73,7 +73,9 @@ Current upstream changelog and command reference include:
 - `hw bwm wifipower`: Wi-Fi modem off and power-save mode.
 - `hw bwm powersave`: ESP32 power-save settings.
 - `hw bwm wifi`: Wi-Fi STA + TCP server management.
-- `hw bwm upgrade`: ESP32 firmware update over an existing BWM link.
+- `hw bwm upgrade`: ESP32-C2 BWM firmware update over an existing BWM app_com link; distinct from PM5 ARM/FPGA flashing.
+- PR #3650 adds main PM5 firmware flashing over a BWM-aware bootrom's wireless byte stream; the bootrom must advertise `DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM` and wireless flashing must be refused otherwise.
+- BWM master commit `b450b133...` adds optional mDNS (`<hostname>.local`, `_proxmark5._tcp`) with a Kconfig default of enabled; installed binary support remains unknown.
 - Battery/charger telemetry and configurable charger operations require careful per-command verification; mutating charger operations must not be exposed as routine safe diagnostics.
 - Bulk BLE/Wi-Fi transfer pacing does not prove real-time LF/COTAG streaming. Track that as a separate transport/data-path item.
 
@@ -102,14 +104,14 @@ Exit condition: reproducible baseline report with unknowns explicitly marked.
 
 Exit condition: one authoritative mainline implementation, no undocumented duplicate branch assumptions.
 
-### P2 — Wi-Fi/BWM upstream synchronization
+### P2 — Wireless firmware paths and BWM OTA audit
 
-1. Inspect PR #3650 and current upstream implementation in full.
-2. Determine whether Wi-Fi OTA is BWM ESP32-C2 OTA over the PM5 app_com link, a new transport mode, or another update path; document exact protocol/actions/chunk sizing/retries/reboot/confirmation.
-3. Compare it line-by-line with `BwmEspFirmwareUpdater` and the existing `WifiTcpTransport`.
-4. Add source-backed tests for chunk boundaries, lost replies, retries, abort, reconnect and post-reboot version check.
-5. Keep BWM OTA separate from main PM5 ARM/FPGA flashing.
-6. Do not run an OTA update on the user's hardware until identity, image source/checksum, compatibility, backup/recovery and explicit confirmation are established.
+1. Keep three distinct paths: (a) PM5 ARM/FPGA flash through the BWM-aware bootrom over TCP/UDP/BLE, (b) BWM ESP32-C2 OTA through `CMD_PM5_BWM_ESP_OTA`, and (c) recovery through the physical 5-pin ESP header/esptool.
+2. Inspect PR #3650's bootrom and host-flasher changes; identify the bootrom `DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM` gate and the USB-only prerequisite for installing a BWM-aware bootrom.
+3. Compare BWM ESP OTA implementation with `BwmEspFirmwareUpdater`, including app signature `0xABCD5432`, 240-byte maximum chunks, write pacing, six whole-image attempts, lost END acknowledgement and post-update reset/version confirmation.
+4. Add source-backed tests for image validation, begin/write/end errors, ambiguous finalization and retry policy.
+5. Design a separate legacy bootloader/OLD-frame transport for wireless PM5 flashing; do not reuse the PM3-NG-only `WifiTcpTransport` without protocol proof.
+6. Do not execute any firmware write on the user's hardware until exact hardware/bootrom identity, trusted image/checksum, compatibility, recovery path and explicit confirmation are established.
 
 Exit condition: documented protocol equivalence or explicit incompatibility; no guessed OTA implementation.
 
@@ -198,7 +200,7 @@ For every continuation:
 ## 8. Immediate next actions
 
 1. Reconcile PR #10 against current main.
-2. Verify the current implementation against upstream Wi-Fi OTA PR #3650.
+2. Audit PR #3650's BWM-aware bootrom wireless flashing separately from ESP32-C2 BWM OTA.
 3. Refresh the BWM upstream snapshot and command/capability registry, including BLE pairing, auto-off and power-save additions.
 4. Complete the physical PM5/BWM identity and read-only diagnostic baseline.
 5. Expand transport fault tests and end-to-end report export.
