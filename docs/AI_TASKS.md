@@ -150,3 +150,13 @@ The active desktop entry point is `MainForm2` (not the older `MainForm`). Its BW
 ## Firmware update safety rule
 
 The BWM OTA button in active `MainForm2` is intentionally disabled. Do not re-enable it until the workflow verifies package provenance/hash, exact ESP32-C2/BWM firmware compatibility, a recovery path and post-update version confirmation. PR #3650's main PM5 ARM/FPGA wireless flash is a separate BWM-aware bootrom path and needs its own OLD-frame bootloader transport and capability gate.
+
+## Bootloader OLD frame foundation
+
+Implemented:
+- Fixed 544-byte OLD frame codec (8-byte command + 3×8-byte args + 512-byte data).
+- Read-only `CMD_DEVICE_INFO` model: flags in arg0, info version in arg1, BWM baud in arg2.
+- BWM stream support flag is bit 9; BWM bridge readiness additionally requires nonzero probed baud.
+- Unit tests for endian/layout/truncation and capability gating.
+
+Not implemented: byte-stream transport, OLD frame response correlation, BWM DATA_FORWARD wrapper, TCP/BLE bootloader session, firmware flashing. Never infer that the Wi-Fi link is connected from the bootloader's BWM baud alone.
