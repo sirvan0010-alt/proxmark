@@ -186,3 +186,7 @@ These are repository/test corrections, not physical hardware findings. The subse
 The full Linux build/test matrix passed, including the new PM5 capabilities, CEP, OTA and mDNS parser tests. The Windows test matrix also passed. Windows desktop restore succeeded, but the single-file desktop publish failed on an inherited invalid C# character literal in MainForm2. It has since been corrected. An impossible image-length comparison in the OTA updater that generated a compiler warning was also removed.
 
 The new mDNS button/result selector was added to active MainForm2 after this run, so the next full CI run must validate both that UI integration and the Windows publish step.
+
+## 2026-10-02 — Windows BLE publish audit
+
+The next Windows publish exposed inherited API assumptions in `WindowsBleProxmarkTransport`: `GattCharacteristic` does not expose `Dispose()` or `MaxWriteValueSize` in the Windows SDK target used by this project. Removed the invalid characteristic disposal calls and now use the guaranteed default ATT write payload of 20 bytes (MTU 23 minus 3-byte ATT header). Negotiated GATT MTU sizing can be added later through the supported session API. No BLE hardware transfer was performed. A fresh Windows desktop publish is required.
