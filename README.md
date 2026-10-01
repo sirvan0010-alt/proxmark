@@ -272,3 +272,11 @@ The desktop executable shell is now in the repository and CI is configured to pr
 ## Project principle
 
 **First make the device observable and trustworthy. Then make it easy to control.**
+
+
+## Project plans and AI handoff
+
+- **[Consolidated master plan](docs/MASTER_PLAN_2026-10-02.md)** — current implementation status, priorities, upstream changes, hardware-verification gates and next actions.
+- [Roadmap](docs/ROADMAP.md) — milestone overview.
+- [AI continuation tasks](docs/AI_TASKS.md) and [AI context](AI_CONTEXT.md) — instructions for future coding assistants.
+- [BWM synchronization mini-plan](docs/PM5_BWM_SYNC_MINIPLAN_2026-09-28.md) — fast-moving BLE/Wi-Fi/ESP32-C2 work.
