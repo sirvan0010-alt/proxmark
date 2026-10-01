@@ -288,3 +288,5 @@ The desktop executable shell is now in the repository and CI is configured to pr
 - [Firmware compatibility registry](compatibility/firmware.json)
 
 The BWM ESP32 firmware now has optional mDNS/DNS-SD source support; whether it is enabled in a particular installed image remains to be detected.
+
+The Core also supports optional DNS-SD discovery of BWM-enabled PM5 devices via `_proxmark5._tcp.local`; manual IP/port remains available when mDNS is disabled or filtered by the network.
