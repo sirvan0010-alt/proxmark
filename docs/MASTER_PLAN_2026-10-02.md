@@ -251,3 +251,7 @@ A new full run is required before merging PR #13.
 ### Firmware update controls remain gated
 
 The Windows UI now keeps the BWM ESP32-C2 OTA button disabled. The protocol updater is source-audited and unit-tested, but the app does not yet enforce a trusted firmware package/checksum, exact device/firmware compatibility, a verified recovery path and post-update attestation. Main PM5 ARM/FPGA wireless flashing through the BWM-aware bootrom is a separate feature and is not yet implemented in the Control Center.
+
+## Windows BLE API compatibility fix
+
+CI run 36937392072 passed Ubuntu build/tests and Windows build/tests, but Windows single-file publish failed on unsupported `GattCharacteristic.Dispose()` and `MaxWriteValueSize` API assumptions. Removed characteristic disposal and changed write chunking to the guaranteed 20-byte default ATT payload. Negotiated MTU support remains a later optimisation. The latest head needs a fresh Windows publish before merge.
