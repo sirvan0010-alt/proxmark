@@ -1,3 +1,5 @@
+using PM5Control.Core.Protocols.Pm3;
+
 namespace PM5Control.Core.Devices;
 
 [Flags]
