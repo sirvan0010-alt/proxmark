@@ -8,6 +8,12 @@ namespace PM5Control.Core.Tests;
 public sealed class Pm5MdnsDiscoveryTests
 {
     [Fact]
+    public void WifiTcpTransportUsesCurrentUpstreamDefaultPort()
+    {
+        Assert.Equal(18888, PM5Control.Core.Connections.WifiTcpTransport.DefaultPort);
+    }
+
+    [Fact]
     public void BuildQueryRequestsPm5TcpDnsSdService()
     {
         var query = Pm5MdnsDiscovery.BuildQuery();
@@ -27,7 +33,7 @@ public sealed class Pm5MdnsDiscoveryTests
         var service = Assert.Single(services);
         Assert.Equal("PM5._proxmark5._tcp.local", service.InstanceName);
         Assert.Equal("pm5.local", service.HostName);
-        Assert.Equal(7777, service.Port);
+        Assert.Equal(18888, service.Port);
         Assert.Contains(IPAddress.Parse("192.168.1.77"), service.Addresses);
     }
 
@@ -68,7 +74,7 @@ public sealed class Pm5MdnsDiscoveryTests
         var srvDataStart = packet.Count;
         AddUInt16(packet, 0); // priority
         AddUInt16(packet, 0); // weight
-        AddUInt16(packet, 7777);
+        AddUInt16(packet, 18888);
         var hostOffset = packet.Count;
         AddName(packet, "pm5.local");
         var srvLength = (ushort)(packet.Count - srvDataStart);
