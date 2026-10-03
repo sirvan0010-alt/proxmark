@@ -1,6 +1,6 @@
 # Proxmark upstream watchlist
 
-Last recorded: 2026-08-31
+Last recorded: 2026-10-03
 
 Reference repositories for future Proxmark checks and updates:
 
@@ -82,3 +82,11 @@ Latest inspected revisions:
 New BWM item: optional mDNS responder, Kconfig `CONFIG_PM5_MDNS_ENABLE` default `y`, announces `<hostname>.local` and `_proxmark5._tcp` for the TCP server. Add DNS-SD discovery as an optional path in Control Center; always retain manual IP/port fallback. The current PM5 usage guide still says there is no mDNS, so document this source discrepancy and do not infer installed-firmware support.
 
 The PM3 host client has a new mDNS connection hint in commit `256f30f...`. Also continue tracking CEP timer/SPI fixes, BWM OTA, BLE pairing, auto-off, Wi-Fi power-save and ESP32 power-save.
+
+
+## Update — 2026-10-03
+
+- RRG proxmark3 TCP server default is 18888 (not 7777): 133b981512f317c38b836f208e9c39afd75b5f28, f9bd1c30105688ad4ae41613d490110e419aa602, 63063bd030ae0e9cd196068bdf884d4225577fb1.
+- BWM ESP32 PR #8 merged at 8153c26efee3ba2bb8dd6485223ac0742e4b165f: stop mDNS when Wi-Fi modes are disabled; monitor re-advertisement and reconnect behaviour.
+- Keep DNS-SD _proxmark5._tcp.local optional, with manual host/port fallback. No result during Wi-Fi stop is not proof of hardware failure.
+- Continue CEP regression monitoring: f1cb4952086861f2e27c89fddf0d274269cff9d6 and e6d7cd1f9d330b930073f32cda06e308774cd36d.
