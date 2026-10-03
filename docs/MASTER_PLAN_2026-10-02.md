@@ -36,7 +36,7 @@ The following is the repository-level baseline recovered from recent work. Statu
 | Request/response correlation and events | Implemented in Core | Validate unsolicited events on hardware |
 | USB/serial | Abstraction and desktop discovery present | Confirm actual driver/interface and end-to-end PM5 session |
 | BLE | Transport/UI and BWM protocol work present | Verify discovery, connection, pairing, commands, reconnect and bulk transfers on device |
-| Wi-Fi/TCP | Wi-Fi TCP transport and diagnostics present; upstream documents TCP server, default port 7777 | Verify the actual BWM endpoint, PM3-NG byte stream, reconnect and end-to-end commands |
+| Wi-Fi/TCP | Native PM3-NG TCP transport; upstream default port 18888 (since 2026-10-02) | Verify the actual BWM endpoint, PM3-NG byte stream, reconnect and end-to-end commands |
 | ESP32-C2 BWM OTA | Protocol updater and image checks implemented | Compare with current upstream Wi-Fi flashing path; test only after compatibility, backup and recovery review |
 | CEP | Capabilities/model work exists on PR #10 branch | Reconcile PR with main; verify CEP behaviour and do not mistake it for PC transport |
 | Windows UI | Desktop shell, inspector foundations and BWM/Wireless tab exist | Connect all views to verified data and clear evidence labels |
@@ -286,3 +286,30 @@ CI run 36937392072 passed Ubuntu build/tests and Windows build/tests, but Window
 5. Only after recovery/package verification, revisit firmware update controls.
 
 This is the current authoritative plan for future agents.
+
+
+## Execution update — 2026-10-03
+
+### Verified upstream changes
+
+- RRG proxmark3 changed the BWM TCP server default from 7777 to 18888: 133b981512f317c38b836f208e9c39afd75b5f28; follow-ups f9bd1c30105688ad4ae41613d490110e419aa602 and 63063bd030ae0e9cd196068bdf884d4225577fb1 update implementation references and documentation.
+- Proxmark5_BWM_esp32 PR #8 merged as 8153c26efee3ba2bb8dd6485223ac0742e4b165f. mDNS is stopped when Wi-Fi modes are disabled, avoiding hangs on Wi-Fi stop/restart. Related commits: a4c108536dc2d3396413ed9aadc4c4c247f53fe6 and 559244798ae5905a10b8ceba61ff8e5f4d23dfc2.
+- CEP fixes remain relevant: f1cb4952086861f2e27c89fddf0d274269cff9d6 and e6d7cd1f9d330b930073f32cda06e308774cd36d.
+
+### Implemented in Control Center
+
+- WifiTcpTransport now defaults to port 18888 via DefaultPort; explicit port overrides remain supported.
+- compatibility/bwm.json records the current BWM PR #8 merge, mDNS lifecycle, and TCP port transition.
+- Existing DNS-SD parser and Windows selection UI from PR #13 are retained; no duplicate discovery stack was added.
+
+### Immediate next work
+
+1. Add unit tests for default port 18888 and explicit-port override; test mDNS disappearance/reappearance across Wi-Fi stop/restart.
+2. Audit upstream BLE pairing/passkey, bonded-device and TX-power controls against exact BWM UART command definitions before adding UI or writes.
+3. Audit power-save/auto-off controls; expose read-only state only where confirmed getters and decoders exist.
+4. Design bootrom Device Info parsing and a separate OLD-frame wireless PM5 flasher. Never route ARM/FPGA flashing through PM3-NG TCP transport.
+5. Complete a read-only physical baseline: USB driver/VID/PID, PM5/ARM/FPGA/bootrom/BWM versions, BLE, Wi-Fi, mDNS and power telemetry.
+
+### Verification boundary
+
+The TCP port update is source-derived and implemented, but fresh CI and physical PM5+BWM verification remain pending. The mDNS lifecycle fix is upstream source-verified only. No firmware write or physical-device change was performed. Keep SOURCE_VERIFIED, UNIT_TESTED, CI_VERIFIED and HARDWARE_VERIFIED distinct.
