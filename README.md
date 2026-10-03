@@ -287,6 +287,6 @@ The desktop executable shell is now in the repository and CI is configured to pr
 - [BWM compatibility evidence](compatibility/bwm.json)
 - [Firmware compatibility registry](compatibility/firmware.json)
 
-The BWM ESP32 firmware now has optional mDNS/DNS-SD source support; whether it is enabled in a particular installed image remains to be detected.
+The BWM ESP32 firmware has optional mDNS/DNS-SD support whose lifecycle follows Wi-Fi state; discovery can disappear during Wi-Fi stop and return after restart. Whether it is enabled in a particular installed image remains to be detected. The upstream default TCP port is now 18888 (previously 7777); explicit host/port overrides remain supported.
 
 The Core also supports optional DNS-SD discovery of BWM-enabled PM5 devices via `_proxmark5._tcp.local`; manual IP/port remains available when mDNS is disabled or filtered by the network.
