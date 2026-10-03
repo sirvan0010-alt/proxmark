@@ -133,3 +133,27 @@ Implemented Core class `Pm5MdnsDiscovery` with:
 - returned hostname, port and discovered IP addresses.
 
 Unit tests use a synthetic compressed mDNS response. CI and real PM5+BWM network verification remain pending. If discovery returns no result, keep the device state UNKNOWN and allow manual IP/port connection.
+
+
+## Upstream sync — 2026-10-03
+
+### Verified upstream delta
+
+- `RfidResearchGroup/proxmark3` commit `133b981512f317c38b836f208e9c39afd75b5f28`: BWM TCP server default changes from `7777` to `18888`. Follow-up commits `f9bd1c30105688ad4ae41613d490110e419aa602` and `63063bd030ae0e9cd196068bdf884d4225577fb1` update implementation/docs.
+- `RfidResearchGroup/Proxmark5_BWM_esp32` PR #8 merge `8153c26efee3ba2bb8dd6485223ac0742e4b165f` fixes hangs on Wi-Fi stop/restart by stopping mDNS when Wi-Fi modes are disabled. Relevant commits include `559244798ae5905a10b8ceba61ff8e5f4d23dfc2` and `a4c108536dc2d3396413ed9aadc4c4c247f53fe6`.
+- Existing mDNS discovery implementation is already present in Core and Windows UI from PR #13; the remaining issue is lifecycle/reconnect behaviour and validation, not adding a second discovery implementation.
+
+### Implemented in Control Center
+
+- `WifiTcpTransport.DefaultPort` is now `18888`; constructor default uses the constant. Explicit user-supplied ports remain supported.
+- BWM compatibility registry now records the new upstream BWM commit, mDNS stop-on-Wi-Fi-disable behaviour, and TCP port transition.
+
+### Still required
+
+- Add/confirm unit coverage for `WifiTcpTransport.DefaultPort == 18888` and explicit-port override.
+- Add discovery/reconnect tests for mDNS service disappearance during Wi-Fi disable and reappearance after Wi-Fi restart; DNS-SD no-result remains UNKNOWN.
+- Inspect current upstream BWM source before implementing any BLE pairing/power-save write commands; retain read-only-first policy and do not infer BWM UART command IDs from CLI syntax.
+- Add a separate bootrom/OLD-frame transport only after source-level protocol audit; never reuse PM3-NG `WifiTcpTransport` for main ARM/FPGA flashing.
+- Physical PM5+BWM verification remains pending. No firmware writes are part of this update.
+
+Evidence: source/commit verified 2026-10-03; Control Center code change committed separately; physical device behaviour not verified.
