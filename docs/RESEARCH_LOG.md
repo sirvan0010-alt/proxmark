@@ -196,3 +196,22 @@ The next Windows publish exposed inherited API assumptions in `WindowsBleProxmar
 PR #13 merged to main as `69360c313cf5b68e85262dedc2cff38f90ada47f`. Final CI run `36937595521` passed both evidence gates, Ubuntu build/tests, Windows build/tests, Windows desktop restore and self-contained single-file publish. This includes the mDNS parser/UI, packed capabilities v12/v13 decoder, CEP model, BWM OTA guard changes and Windows BLE GATT API correction.
 
 No PM5/BWM physical device was flashed or modified. The BWM OTA UI remains disabled. Next hardware phase is read-only baseline collection and bootloader capability detection.
+
+
+## 2026-10-03 — BWM TCP port and mDNS lifecycle update
+
+**Question:** What changed upstream after the 2026-10-02 mDNS integration?
+
+**Observation:** RRG proxmark3 changed the BWM TCP server default from 7777 to 18888. Implementation commit 133b981512f317c38b836f208e9c39afd75b5f28; follow-ups f9bd1c30105688ad4ae41613d490110e419aa602 and 63063bd030ae0e9cd196068bdf884d4225577fb1. BWM ESP32 PR #8 merged as 8153c26efee3ba2bb8dd6485223ac0742e4b165f and stops mDNS when Wi-Fi modes are disabled, preventing mDNS lifecycle hangs on Wi-Fi stop/restart.
+
+**Evidence level:** SOURCE_VERIFIED
+
+**Source:** RfidResearchGroup/proxmark3; RfidResearchGroup/Proxmark5_BWM_esp32.
+
+**Hardware identity:** None; no physical PM5/BWM session.
+
+**Test:** WifiTcpTransport default updated to 18888; explicit custom ports remain supported. Fresh CI and hardware validation not yet run.
+
+**Result:** Control Center no longer defaults to the obsolete 7777 port. mDNS disappearance while Wi-Fi is disabled is expected; discovery/reconnect must retry rather than classify the device as absent.
+
+**Next action:** Add default/override tests and mDNS stop/restart tests; audit BLE management command definitions. No firmware writes.
