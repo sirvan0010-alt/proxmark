@@ -9,7 +9,7 @@ namespace PM5Control.Core.Connections;
 /// Native PM5 BWM Wi-Fi/TCP transport.
 ///
 /// The BWM terminates the Wi-Fi side and exposes the PM3-NG command stream
-/// directly on TCP (default upstream port 7777). No BWM frame is wrapped around
+/// directly on TCP (default upstream port 18888). No BWM frame is wrapped around
 /// the PM3 frame on this link.
 /// </summary>
 public sealed class WifiTcpTransport : IProxmarkTransport, IPm3ReadOnlyTransport, IPm3CommandTransport, IProxmarkAbortTransport
@@ -21,7 +21,9 @@ public sealed class WifiTcpTransport : IProxmarkTransport, IPm3ReadOnlyTransport
     private NetworkStream? _stream;
     private readonly SemaphoreSlim _ioGate = new(1, 1);
 
-    public WifiTcpTransport(string host, int port = 7777, int timeoutMs = 5000)
+    public const int DefaultPort = 18888;
+
+    public WifiTcpTransport(string host, int port = DefaultPort, int timeoutMs = 5000)
     {
         if (string.IsNullOrWhiteSpace(host)) throw new ArgumentException("Host is required.", nameof(host));
         if (port is < 1 or > 65535) throw new ArgumentOutOfRangeException(nameof(port));
