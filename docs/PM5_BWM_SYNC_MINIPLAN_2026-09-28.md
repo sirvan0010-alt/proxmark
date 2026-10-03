@@ -150,7 +150,8 @@ Unit tests use a synthetic compressed mDNS response. CI and real PM5+BWM network
 
 ### Still required
 
-- Add/confirm unit coverage for `WifiTcpTransport.DefaultPort == 18888` and explicit-port override.
+- [x] Add a unit assertion for `WifiTcpTransport.DefaultPort == 18888` (commit 65d1942); CI is running.
+- [ ] Add explicit custom-port override test.
 - Add discovery/reconnect tests for mDNS service disappearance during Wi-Fi disable and reappearance after Wi-Fi restart; DNS-SD no-result remains UNKNOWN.
 - Inspect current upstream BWM source before implementing any BLE pairing/power-save write commands; retain read-only-first policy and do not infer BWM UART command IDs from CLI syntax.
 - Add a separate bootrom/OLD-frame transport only after source-level protocol audit; never reuse PM3-NG `WifiTcpTransport` for main ARM/FPGA flashing.
