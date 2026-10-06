@@ -246,3 +246,38 @@ rather than requiring the user to know whether a particular firmware implementat
 - Source commit used here: `b918166128e05455c2dcb4e232216d453bbf29ee`
 - `main/app_com_defs.h`: https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/b918166128e05455c2dcb4e232216d453bbf29ee/main/app_com_defs.h
 - `DEV.md`: https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/b918166128e05455c2dcb4e232216d453bbf29ee/DEV.md
+
+
+## PM5 ARM structured diagnostic commands — added 2026-10-06
+
+These commands are **PM5 ARM/NG commands**, not ESP32-C2 BWM UART command IDs. They therefore belong beside the PM3/PM5 host protocol layer rather than the 1000+/4000+ BWM command families.
+
+| Code | Symbol | Response | Evidence |
+|---:|---|---|---|
+| `0x0184` | `CMD_PM5_BWM_GET_BATTERY` | packed 19-byte `bwm_battery_info_t` | PROTOCOL VERIFIED |
+| `0x0185` | `CMD_CEP_STATUS` | packed 44-byte `cep_status_t` | PROTOCOL VERIFIED |
+
+Source commits:
+
+- `5661f21d6099ac0faf3be52138cea650aa6bd885`
+- `ac9c402e13d2cf735fe7348c975d876ebe324010`
+
+The Control Center must not confuse these with the ESP32-C2 BWM command namespace. They are sent through the PM3/PM5 NG host command transport.
+
+### Battery payload
+
+The exact 19-byte layout is:
+
+`bool bwm_present`, `bool gauge_ok`, five little-endian `uint16_t` values for SoC/voltage/remaining/full/design capacity, little-endian `int16_t` current, little-endian `int16_t` temperature in 0.1 C, then charger fault, charge status and health percentage.
+
+### CEP status payload
+
+The exact 44-byte layout is:
+
+`uint8_t cep_active`, the 19-byte battery structure, and 24 bytes of NUL-terminated firmware-version storage.
+
+A build without BWM/CEP support can still answer successfully with zeroed optional fields. The client must consult `CMD_CAPABILITIES` v12/v13 compiled flags before interpreting those zeroes as subsystem absence.
+
+These structured commands are safe read-only probes. They do not perform firmware updates, charger configuration or wireless control.
+
+Physical PM5 support remains UNKNOWN until the commands are observed on the user's device.
