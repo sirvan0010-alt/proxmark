@@ -313,3 +313,37 @@ This is the current authoritative plan for future agents.
 ### Verification boundary
 
 The TCP port update is source-derived and implemented, but fresh CI and physical PM5+BWM verification remain pending. The mDNS lifecycle fix is upstream source-verified only. No firmware write or physical-device change was performed. Keep SOURCE_VERIFIED, UNIT_TESTED, CI_VERIFIED and HARDWARE_VERIFIED distinct.
+
+
+## Execution update — 2026-10-06
+
+### Upstream structured diagnostics integrated
+
+RRG `proxmark3` added two machine-readable PM5 status commands:
+
+- `CMD_PM5_BWM_GET_BATTERY` = `0x0184`, commit `5661f21d6099ac0faf3be52138cea650aa6bd885`.
+- `CMD_CEP_STATUS` = `0x0185`, commit `ac9c402e13d2cf735fe7348c975d876ebe324010`.
+
+These are preferable to parsing free-text `hw status` when a compatible PM5 firmware exposes them.
+
+### Control Center work completed
+
+- Added both command IDs to the PM3/PM5 command model.
+- Added both to the explicit read-only diagnostic whitelist.
+- Added exact packed-payload decoder in `Pm5StatusDecoder`.
+- Added regression tests for the 19-byte battery payload, 44-byte CEP payload, malformed length rejection and read-only gating.
+- Added provenance to `docs/UPSTREAM_UPDATE_2026-10-06.md`, AI handoff and BWM command reference.
+
+### Evidence boundary
+
+Current status is SOURCE/PROTOCOL VERIFIED + UNIT TESTED. It is not CI VERIFIED in this session and is not HARDWARE VERIFIED.
+
+### Revised next execution order
+
+1. Connect `Pm5StatusDecoder` to the existing read-only inspector and diagnostic evidence/report pipeline.
+2. Add simulator fixtures for `0x0184` and `0x0185`, including truncated/malformed payloads and zeroed optional fields.
+3. Add transport-level request/response fixtures and correlation tests.
+4. Expose structured battery/CEP fields in the Windows Inspector with provenance labels.
+5. Perform the read-only physical PM5/BWM baseline and promote only observed values to HARDWARE_OBSERVED/HARDWARE_VERIFIED as appropriate.
+6. Continue bootloader Device Info / `DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM` work separately; do not mix diagnostic reads with firmware flashing.
+7. Continue monitoring PM5 regressions, especially #3680 and #3669, before broadening automated RF coverage.
