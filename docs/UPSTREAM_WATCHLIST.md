@@ -90,3 +90,14 @@ The PM3 host client has a new mDNS connection hint in commit `256f30f...`. Also 
 - BWM ESP32 PR #8 merged at 8153c26efee3ba2bb8dd6485223ac0742e4b165f: stop mDNS when Wi-Fi modes are disabled; monitor re-advertisement and reconnect behaviour.
 - Keep DNS-SD _proxmark5._tcp.local optional, with manual host/port fallback. No result during Wi-Fi stop is not proof of hardware failure.
 - Continue CEP regression monitoring: f1cb4952086861f2e27c89fddf0d274269cff9d6 and e6d7cd1f9d330b930073f32cda06e308774cd36d.
+
+
+## Update — 2026-10-06
+
+### New high-priority upstream watch items
+
+- RRG `proxmark3` `5661f21d6099ac0faf3be52138cea650aa6bd885`: structured `CMD_PM5_BWM_GET_BATTERY` (`0x0184`).
+- RRG `proxmark3` `ac9c402e13d2cf735fe7348c975d876ebe324010`: structured `CMD_CEP_STATUS` (`0x0185`).
+- Current RRG PM5 regressions to watch: #3680 (LF 134.2 kHz/TI-HDX timeouts), #3669 (8-series ID write regression), #3664 (PM5 HF MF autopwn), #3595 (PM5 hardnested/Auth1/Auth2), #3516 (MifareCIdent hard-hang).
+
+Control Center policy: prefer the structured commands for machine-readable diagnostics over parsing `hw status` text, but retain the textual path as a fallback/evidence source until real hardware and firmware-version compatibility are established.
