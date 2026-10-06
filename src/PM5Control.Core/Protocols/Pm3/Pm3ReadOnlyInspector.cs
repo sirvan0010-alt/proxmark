@@ -87,6 +87,42 @@ public static class Pm3ReadOnlyInspector
         return new Pm3ReadOnlyIdentity("PM3-family ARM endpoint verified; hardware family not yet confirmed", arm, fpga, text);
     }
 
+    /// <summary>
+    /// Queries the upstream PM5 structured BWM battery snapshot. Call only after
+    /// capability/firmware evidence permits the probe; older firmware may not know it.
+    /// </summary>
+    public static async Task<Pm5BwmBatteryStatus> QueryPm5BwmBatteryAsync(
+        Pm3SerialTransport transport,
+        CancellationToken cancellationToken = default)
+    {
+        var response = (await transport.SendReadOnlyAsync(
+            Pm3CommandCode.Pm5BwmGetBattery, cancellationToken).ConfigureAwait(false)).Response;
+
+        if (response.Status != 0)
+            throw new InvalidDataException(
+                $"CMD_PM5_BWM_GET_BATTERY failed: status={response.Status}, reason={response.Reason}.");
+
+        return Pm5StatusDecoder.DecodeBattery(response.Payload);
+    }
+
+    /// <summary>
+    /// Queries the upstream PM5/CEP structured status snapshot. This is a
+    /// read-only PM5 ARM probe and is not the ESP32/BWM UART command namespace.
+    /// </summary>
+    public static async Task<Pm5CepStatus> QueryCepStatusAsync(
+        Pm3SerialTransport transport,
+        CancellationToken cancellationToken = default)
+    {
+        var response = (await transport.SendReadOnlyAsync(
+            Pm3CommandCode.CepStatus, cancellationToken).ConfigureAwait(false)).Response;
+
+        if (response.Status != 0)
+            throw new InvalidDataException(
+                $"CMD_CEP_STATUS failed: status={response.Status}, reason={response.Reason}.");
+
+        return Pm5StatusDecoder.DecodeCepStatus(response.Payload);
+    }
+
     public static async Task<Pm3CapabilitiesReport> QueryCapabilitiesAsync(Pm3SerialTransport transport, CancellationToken cancellationToken = default)
     {
         var response = (await transport.SendReadOnlyAsync(Pm3CommandCode.Capabilities, cancellationToken).ConfigureAwait(false)).Response;
