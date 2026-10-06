@@ -11,6 +11,7 @@ M1 is still software-only until the first real PM5 hardware session. No document
 - BWM framing: CRC, codec, stream parser, event dispatcher
 - Unit tests for BWM framing/parser/event dispatch
 - CI pipeline for Linux and Windows
+- `SerialPortSelector` (Core) + Desktop port selector: when more than one Windows COM port is detected, the previous `COM3`, or otherwise first-port, silent guess is replaced with an explicit candidate list, a stated reason, and a toolbar dropdown so the user can pick the correct port themselves. This is a UX/ordering decision only; it makes no claim about which port is the PM5, since hardware identity still comes from the read-only protocol handshake.
 
 ## Implementation order
 

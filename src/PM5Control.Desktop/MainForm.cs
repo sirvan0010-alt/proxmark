@@ -40,6 +40,12 @@ internal sealed class MainForm : Form
     private readonly Label _statusPill = new();
     private readonly TextBox _log = new();
     private readonly System.Windows.Forms.Timer _timer = new();
+    private readonly ToolStripComboBox _portSelector = new()
+    {
+        DropDownStyle = ComboBoxStyle.DropDownList,
+        Width = 90
+    };
+    private readonly AppSettings _settings = AppSettings.Load();
 
     private ToolStripButton _btnConnect = null!;
     private ToolStripButton _btnVersion = null!;
@@ -53,6 +59,7 @@ internal sealed class MainForm : Form
     private ToolStripButton _btnExport = null!;
     private bool _developerMode;
     private bool _operationInProgress;
+    private bool _suppressPortSelectionEvent;
 
     public MainForm()
     {
@@ -126,7 +133,13 @@ internal sealed class MainForm : Form
         _btnExport = MakeToolButton("Export report", ExportReport);
         _btnRefreshPorts = MakeToolButton("Refresh ports", () => RefreshDeviceState());
 
+        _portSelector.ForeColor = Color.Black;
+        _portSelector.Font = FontToolbar;
+        _portSelector.SelectedIndexChanged += (_, _) => OnPortSelectorChanged();
+
         strip.Items.Add(_btnConnect);
+        strip.Items.Add(new ToolStripLabel("Port:") { ForeColor = FgText, Font = FontToolbar, Margin = new Padding(8, 2, 2, 2) });
+        strip.Items.Add(_portSelector);
         strip.Items.Add(new ToolStripSeparator());
         strip.Items.Add(_btnVersion);
         strip.Items.Add(_btnStatus);
@@ -266,23 +279,49 @@ internal sealed class MainForm : Form
 
     private void RefreshDeviceState(bool logChanges = true)
     {
-        var ports = GetSerialPorts();
-        var port = ports.FirstOrDefault(p => p.Equals("COM3", StringComparison.OrdinalIgnoreCase)) ?? ports.FirstOrDefault();
+        var selection = SerialPortSelection.Choose(GetSerialPorts(), _settings.LastSerialPort);
 
-        if (port is null)
+        _suppressPortSelectionEvent = true;
+        try
+        {
+            _portSelector.Items.Clear();
+            foreach (var candidate in selection.Candidates)
+                _portSelector.Items.Add(candidate);
+
+            if (selection.DefaultPort is not null)
+                _portSelector.SelectedItem = selection.DefaultPort;
+        }
+        finally
+        {
+            _suppressPortSelectionEvent = false;
+        }
+
+        if (selection.DefaultPort is null)
         {
             _connectionValue.Text = "Not detected";
             _portValue.Text = "No serial ports detected";
             SetToolbarDeviceButtonsEnabled(false);
             SetUnknownHardware();
-            if (logChanges) Log("No Windows serial port detected.");
+            if (logChanges) Log(selection.Reason);
             return;
         }
 
         _connectionValue.Text = "Device transport detected";
-        _portValue.Text = port;
+        _portValue.Text = selection.DefaultPort;
         SetToolbarDeviceButtonsEnabled(!_operationInProgress);
-        if (logChanges) Log($"Windows serial port detected: {port}");
+        if (logChanges) Log(selection.Reason);
+    }
+
+    private void OnPortSelectorChanged()
+    {
+        if (_suppressPortSelectionEvent) return;
+        if (_portSelector.SelectedItem is not string port || string.IsNullOrWhiteSpace(port)) return;
+
+        _portValue.Text = port;
+        _settings.LastSerialPort = port;
+        _settings.Save();
+        Log($"Port manually selected: {port}.");
+        SetToolbarDeviceButtonsEnabled(!_operationInProgress);
     }
 
     private void SetToolbarDeviceButtonsEnabled(bool enabled)
@@ -293,6 +332,7 @@ internal sealed class MainForm : Form
         _btnPing.Enabled = enabled;
         _btnCapabilities.Enabled = enabled;
         _btnFullDiag.Enabled = enabled;
+        _portSelector.Enabled = enabled && _portSelector.Items.Count > 0;
     }
 
     private async Task ConnectReadOnlyAsync()

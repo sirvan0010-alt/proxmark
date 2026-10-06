@@ -7,6 +7,11 @@ internal sealed class AppSettings
     public string EspIpAddress { get; set; } = "";
     public int EspTcpPort { get; set; } = 7891;
 
+    // Last serial port explicitly selected by the user. Used only to keep the
+    // same port pre-selected across restarts when it is still present; never
+    // treated as a verified PM5 identity.
+    public string? LastSerialPort { get; set; }
+
     // Ten persistent user-defined read-only debug buttons.
     public string[] CustomButtonNames { get; set; } = Enumerable.Range(1, 10).Select(i => $"Button {i}").ToArray();
     public string[] CustomButtonCommands { get; set; } = new string[10];
