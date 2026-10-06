@@ -308,3 +308,30 @@ Every agent task should include:
 - Never invent battery, wireless, memory, firmware or board facts.
 - Never silently enable flashing, charger writes, FPGA power/configuration or other risky hardware operations.
 - Never rewrite repository history without explicit instruction.
+
+
+## Execution update — 2026-10-06
+
+### New upstream diagnostic contract
+
+`PM5_PROTOCOL_AGENT`, `BWM_ESP_AGENT` and `DIAGNOSTICS_AGENT` must treat the following as the current structured-status contract:
+
+- `RfidResearchGroup/proxmark3` `5661f21d6099ac0faf3be52138cea650aa6bd885`: `CMD_PM5_BWM_GET_BATTERY` = `0x0184`, packed 19-byte battery/charger telemetry.
+- `RfidResearchGroup/proxmark3` `ac9c402e13d2cf735fe7348c975d876ebe324010`: `CMD_CEP_STATUS` = `0x0185`, packed 44-byte CEP + battery + firmware-version snapshot.
+
+Required implementation rule: decode exact little-endian packed layouts, reject malformed lengths, preserve raw payloads in evidence records, and classify results as source/protocol evidence until observed on hardware.
+
+### Current implementation
+
+The Control Center has added the command constants, read-only whitelist entries, exact decoder and regression tests. No firmware write or state-changing BWM operation is involved.
+
+### Next handoff
+
+1. Connect the decoder to the read-only inspector.
+2. Add simulator fixtures for both commands and malformed/truncated payloads.
+3. Add transport-level request/response fixtures.
+4. Add diagnostic-report fields with provenance and latency.
+5. Surface values in the Windows Inspector only after the above contracts are stable.
+6. Schedule physical PM5 verification as the promotion gate.
+
+Do not add a second diagnostic/status subsystem; extend the existing Core diagnostics pipeline.
