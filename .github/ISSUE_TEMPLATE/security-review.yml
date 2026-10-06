@@ -1,0 +1,62 @@
+name: Security review
+description: Review a Proxmark5 feature, protocol or automation change for security and safety.
+title: "[SECURITY] "
+labels:
+  - security
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for defensive security and safety review. State-changing hardware actions require explicit safeguards.
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What feature, protocol, firmware or automation is being reviewed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: threats
+    attributes:
+      label: Threats and failure modes
+      description: Consider unauthorized access, destructive state changes, tampering, secrets, malformed input and unsafe automation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: controls
+    attributes:
+      label: Required controls
+      description: Authorization, confirmation, dry-run, recovery, audit logging, validation and tests.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: List the evidence supporting the decision.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: decision
+    attributes:
+      label: Decision
+      options:
+        - APPROVED
+        - APPROVED_WITH_CONTROLS
+        - BLOCKED
+        - NEEDS_HARDWARE_EVIDENCE
+    validations:
+      required: true
+
+  - type: textarea
+    id: hard_stop
+    attributes:
+      label: Hard stop
+      description: What operation must remain unavailable until missing evidence or controls exist?
+    validations:
+      required: true
