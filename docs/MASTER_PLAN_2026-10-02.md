@@ -347,3 +347,15 @@ Current status is SOURCE/PROTOCOL VERIFIED + UNIT TESTED. It is not CI VERIFIED 
 5. Perform the read-only physical PM5/BWM baseline and promote only observed values to HARDWARE_OBSERVED/HARDWARE_VERIFIED as appropriate.
 6. Continue bootloader Device Info / `DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM` work separately; do not mix diagnostic reads with firmware flashing.
 7. Continue monitoring PM5 regressions, especially #3680 and #3669, before broadening automated RF coverage.
+
+
+### Point 2 progress — 2026-10-06
+
+The structured status decoder is now exposed through the existing `Pm3ReadOnlyInspector` as two explicit read-only methods:
+
+- `QueryPm5BwmBatteryAsync()`
+- `QueryCepStatusAsync()`
+
+They use the existing transport/correlation path and reject non-success responses or malformed payloads through the source-backed decoder. They are intentionally not folded into the unconditional `InspectAsync()` sequence yet: capability gating and older-firmware behaviour must be handled first so an unsupported command cannot turn an otherwise healthy inspection into a false failure.
+
+Next: add simulator/transport fixtures and conditional Inspector orchestration based on `compiled_with_bwm` / `compiled_with_cep`.
