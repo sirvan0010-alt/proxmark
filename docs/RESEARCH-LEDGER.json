@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-09-15T00:15:00Z",
+  "description": "Machine-readable research ledger for Proxmark5 external sources and extractable mechanisms. Unknown facts remain PENDING. No invented revisions, hardware facts, or PM5 capabilities from PM3-only source.",
+  "lifecycleStates": [
+    "PENDING",
+    "AUDITED",
+    "MAPPED",
+    "DECISION",
+    "IMPLEMENTED",
+    "TESTED",
+    "VERIFIED",
+    "CLOSED",
+    "REJECTED",
+    "BLOCKED"
+  ],
+  "decisionTags": [
+    "ADOPT",
+    "ADAPT",
+    "HARDEN",
+    "EXTRACT",
+    "SIMULATE",
+    "REFERENCE",
+    "REJECT"
+  ],
+  "repositories": [
+    {
+      "id": "REP-PM3-UPSTREAM",
+      "name": "RfidResearchGroup/proxmark3",
+      "status": "PENDING",
+      "sourceUrl": "https://github.com/RfidResearchGroup/proxmark3",
+      "revision": null,
+      "notes": "PM3 reference upstream. Mechanisms may be REFERENCE or ADAPT only after pinned audit. Never promote PM3 source to PM5 HARDWARE_VERIFIED.",
+      "mechanisms": []
+    }
+  ],
+  "mechanisms": [],
+  "rules": {
+    "unknownStaysPending": true,
+    "noInventedRevisions": true,
+    "noInventedMechanisms": true,
+    "noPm3AsPm5HardwareProof": true,
+    "researchAgentOwnsCompleteness": true,
+    "orchestratorCannotCloseWithOpenMechanisms": true,
+    "decisionRequiredBeforeImplementation": true,
+    "rejectedMeansOutOfScopeNotUnreviewed": true,
+    "simulatorNeverEqualsHardware": true,
+    "ciNeverEqualsHardware": true
+  }
+}

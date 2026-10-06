@@ -1,0 +1,144 @@
+name: PM5 Agent Contract Gate
+
+on:
+  push:
+    branches: [ "main", "feat/**", "fix/**" ]
+    paths:
+      - "AI_AGENT_REGISTRY.md"
+      - "docs/RESEARCH-LEDGER.json"
+      - "docs/AI-SWARM-ARCHITECTURE.md"
+      - "docs/AI-AGENT-VERIFICATION-GATE.md"
+      - "docs/AI-AGENT-RESULT-SCHEMA.json"
+      - "tools/ai-swarm/**"
+      - ".github/workflows/agent-contract-gate.yml"
+      - ".github/workflows/ai-agent-swarm.yml"
+      - ".github/workflows/ai-agent-runtime.yml"
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "AI_AGENT_REGISTRY.md"
+      - "docs/RESEARCH-LEDGER.json"
+      - "docs/AI-SWARM-ARCHITECTURE.md"
+      - "docs/AI-AGENT-VERIFICATION-GATE.md"
+      - "docs/AI-AGENT-RESULT-SCHEMA.json"
+      - "tools/ai-swarm/**"
+      - ".github/workflows/agent-contract-gate.yml"
+      - ".github/workflows/ai-agent-swarm.yml"
+      - ".github/workflows/ai-agent-runtime.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: Agent registry and Research Ledger gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify required documents
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f AI_AGENT_REGISTRY.md
+          test -f docs/RESEARCH-LEDGER.json
+          test -f docs/AI-SWARM-ARCHITECTURE.md
+          test -f docs/AI-AGENT-VERIFICATION-GATE.md
+          test -f docs/AI-AGENT-RESULT-SCHEMA.json
+          test -f tools/ai-swarm/runner.py
+          test -f tools/ai-swarm/implementation_gate.py
+
+          required=(
+            ORCHESTRATOR_AGENT
+            RESEARCH_AGENT
+            ARCHITECT_AGENT
+            PM5_HARDWARE_AGENT
+            PM5_FIRMWARE_AGENT
+            PM5_PROTOCOL_AGENT
+            BWM_ESP_AGENT
+            RFID_NFC_AGENT
+            TRANSPORT_AGENT
+            SIMULATOR_AGENT
+            DIAGNOSTICS_AGENT
+            COMPATIBILITY_AGENT
+            EVIDENCE_AGENT
+            SECURITY_AGENT
+            TEST_AGENT
+            REVIEW_AGENT
+            FEATURE_ARCHITECT_AGENT
+            EFFICIENCY_AGENT
+            UX_AGENT
+            DOCUMENTATION_AGENT
+            RELEASE_AGENT
+          )
+
+          for role in "${required[@]}"; do
+            if ! grep -Fq "`$role`" AI_AGENT_REGISTRY.md; then
+              echo "ERROR: required role missing from AI_AGENT_REGISTRY.md: $role"
+              exit 1
+            fi
+          done
+
+          # Non-interactive / evidence safety anchors
+          grep -Fq 'Never invent hardware facts' AI_AGENT_REGISTRY.md
+          grep -Fq 'HARDWARE VERIFIED' AI_AGENT_REGISTRY.md
+          grep -Fq 'NO TTY required' docs/AI-SWARM-ARCHITECTURE.md
+          echo "Agent contract documents and roles OK."
+
+      - name: Validate RESEARCH-LEDGER.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, sys
+          path = "docs/RESEARCH-LEDGER.json"
+          with open(path, encoding="utf-8") as f:
+              data = json.load(f)
+          for k in ("schemaVersion", "lifecycleStates", "decisionTags", "repositories", "mechanisms", "rules"):
+              if k not in data:
+                  print(f"ERROR: missing top-level key: {k}")
+                  sys.exit(1)
+          allowed = set(data["lifecycleStates"])
+          for repo in data.get("repositories", []):
+              if not all(x in repo for x in ("id", "name", "status")):
+                  print(f"ERROR: incomplete repository: {repo}")
+                  sys.exit(1)
+              if repo["status"] not in allowed:
+                  print(f"ERROR: invalid status {repo['status']} for {repo['id']}")
+                  sys.exit(1)
+          for m in data.get("mechanisms", []):
+              if not all(x in m for x in ("id", "status")):
+                  print(f"ERROR: incomplete mechanism: {m}")
+                  sys.exit(1)
+              if m["status"] not in allowed:
+                  print(f"ERROR: invalid mechanism status {m['status']}")
+                  sys.exit(1)
+          rules = data.get("rules", {})
+          for rk in (
+              "unknownStaysPending",
+              "noInventedRevisions",
+              "noInventedMechanisms",
+              "researchAgentOwnsCompleteness",
+              "orchestratorCannotCloseWithOpenMechanisms",
+              "noPm3AsPm5HardwareProof",
+              "simulatorNeverEqualsHardware",
+              "ciNeverEqualsHardware",
+          ):
+              if rk not in rules:
+                  print(f"ERROR: missing rule: {rk}")
+                  sys.exit(1)
+          print("Research Ledger schema OK.")
+          PY
+
+      - name: Runner is non-interactive
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Guard: analysis runner must not import interactive prompt stacks
+          if grep -Eiq 'prompt_toolkit|input\(|isatty|confirm_exit|readline' tools/ai-swarm/runner.py; then
+            echo "ERROR: tools/ai-swarm/runner.py appears interactive; CI requires non-interactive runner."
+            exit 1
+          fi
+          echo "runner.py non-interactive check OK."
