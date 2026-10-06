@@ -319,3 +319,19 @@ Final CI run `36937595521` passed all gates: upstream evidence, claim audit, Ubu
 The active desktop entry point is `MainForm2`; BWM/Wireless tab has manual mDNS discovery and user-selected host/port fill. It does not auto-connect. BWM OTA button is intentionally disabled pending package/recovery verification.
 
 Next priority is a read-only physical PM5/BWM baseline, followed by a read-only bootloader Device Info parser for `DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM`. PR #3650's main PM5 wireless flashing path is separate from ESP32-C2 BWM OTA and needs its own legacy bootloader/OLD-frame transport. See `docs/MASTER_PLAN_2026-10-02.md`.
+
+
+## Upstream synchronization — 2026-10-06
+
+A fresh RRG upstream review added two structured PM5 diagnostic commands:
+
+- `CMD_PM5_BWM_GET_BATTERY` = `0x0184`, upstream commit `5661f21d6099ac0faf3be52138cea650aa6bd885`;
+- `CMD_CEP_STATUS` = `0x0185`, upstream commit `ac9c402e13d2cf735fe7348c975d876ebe324010`.
+
+The first returns a packed 19-byte BWM battery/charger telemetry structure. The second returns a packed 44-byte CEP status snapshot containing CEP state, the same battery structure and a firmware-version string. These are source/protocol verified, not physical-hardware verified.
+
+The Control Center now models and unit-tests both payloads and places both command IDs on the explicit read-only probe whitelist. Do not expose them as a general command terminal and do not treat a zero field as proof that a subsystem is absent; `CMD_CAPABILITIES` compiled flags remain the authoritative distinction for build-time BWM/CEP presence.
+
+See `docs/UPSTREAM_UPDATE_2026-10-06.md`.
+
+Current next blocker: connect these decoders to the existing read-only inspector/diagnostic report path, add simulator fixtures and transport-level tests, then surface them in the Windows Inspector. Physical PM5 validation remains required before promoting values beyond source/protocol evidence.
