@@ -1,15 +1,15 @@
 {
   "schemaVersion": 4,
-  "lastChecked": "2026-10-03",
+  "lastChecked": "2026-10-19",
   "component": "PM5 BWM / ESP32 subsystem",
   "status": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
   "upstream": {
     "repository": "RfidResearchGroup/Proxmark5_BWM_esp32",
     "branch": "master",
-    "commit": "8153c26efee3ba2bb8dd6485223ac0742e4b165f",
-    "researchDate": "2026-10-03",
+    "commit": "23bfa7b21004f91dba64468d398971919fca8eda",
+    "researchDate": "2026-10-19",
     "previousBaseline": "b450b1336dfe00fb507efb535ff3d8a1d9d036a9",
-    "latestChange": "BWM PR #8 fixes Wi-Fi stop/restart hangs by stopping mDNS when Wi-Fi modes are disabled; mDNS lifecycle now follows Wi-Fi lifecycle. Upstream PM5 TCP default changed from 7777 to 18888 in proxmark3 commits 133b9815/f9bd1c30/63063bd0.",
+    "latestChange": "BWM commit 4889d2986f7ebba4bd071d2b9895aa5b779ae81c adds power-save/DFS/light-sleep controls, BLE/Wi-Fi modem power-save, link-state broadcasts, a 12 KiB UART RX ring and a 0x55 wake preamble. Commit 23bfa7b21004f91dba64468d398971919fca8eda fixes RX callback teardown ordering. Source-verified only; no physical verification.",
     "ciStatus": "NOT_RECORDED_FOR_EXACT_COMMIT",
     "previousCiStatus": "SUCCESS",
     "previousCiCommit": "e0c4982800eb7d1ca16045631f3460f9f176427c",
@@ -29,10 +29,10 @@
   },
   "transport": {
     "uartBaud": 460800,
-    "uartRxBufferBytes": 4096,
+    "uartRxBufferBytes": 12288,
     "bleRetryDelayMs": 10,
     "confidence": "SOURCE_REPORTED",
-    "source": "RfidResearchGroup/Proxmark5_BWM_esp32 DEV.md and commit 4818511a2b179c61f80f54b5f825428cba51deb8",
+    "source": "RfidResearchGroup/Proxmark5_BWM_esp32 DEV.md and commit 23bfa7b21004f91dba64468d398971919fca8eda; UART RX buffer size from commit 4889d2986f7ebba4bd071d2b9895aa5b779ae81c",
     "mdnsService": "_proxmark5._tcp",
     "mdnsHostname": "<device-identifier>.local",
     "mdnsBuildFlag": "CONFIG_PM5_MDNS_ENABLE (Kconfig default y; build may override)",
@@ -54,13 +54,15 @@
     "pm5IdlePowerSave": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
     "autoOff": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
     "mdns": "SOURCE_VERIFIED_OPTIONAL_DEFAULT_ON_NOT_HARDWARE_VERIFIED",
-    "cep": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED"
+    "cep": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
+    "powerSaveControls": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
+    "linkStateBroadcast": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED"
   },
   "chargerPolicy": {
     "automaticConfiguration": "DISABLED",
     "reason": "No verified PM5+BWM charger-register write/readback path has been established on physical hardware.",
     "note": "The Control Center must not silently apply a guessed charge-voltage target. Battery chemistry and production charge limits remain hardware/pack specific."
   },
-  "evidenceRule": "Upstream source and CI evidence must never be promoted to HARDWARE_VERIFIED without reproducible observation on a physical PM5+BWM unit. The mDNS option being default-enabled in Kconfig does not prove it is enabled in the user's installed binary.",
+  "evidenceRule": "Upstream source and CI evidence must never be promoted to HARDWARE_VERIFIED without reproducible observation on a physical PM5+BWM unit. The 2026-10-19 BWM power-save and callback changes are source-verified only; no physical test was performed.",
   "integrationPolicy": "Control Center now implements native PM5 Wi-Fi/TCP PM3-NG transport and the source-verified BWM ESP32-C2 OTA command protocol. Physical end-to-end verification remains separate. Do not label the wireless stack stable/production-ready."
 }
