@@ -180,3 +180,14 @@ Evidence: source/commit verified 2026-10-03; Control Center code change committe
 ### Status / verification boundary
 
 The above are source-verified findings only. The BWM power-save changes are not physical-hardware verified by this project. The reopened #3648 forwarding/parser issue and #3710 FPGA timing issue are active upstream risks. No firmware update or device mutation is authorized by this sync.
+
+
+## Retry upload — 2026-10-19
+
+### Correction after retry
+- The CEP decoder offset fix is present on branch `pm5-bwm-sync-2026-10-19` (commit `2b57ee791d7757c808486f4caf5c1a00fe93d41d`); it is not merged to main.
+- The prior upload attempt did not complete all related fixes. Test fixture/import updates, GUI default-port correction, compatibility registry refresh and research-log update remain pending until each file is located and CI can be run.
+- Expected GUI default must use `WifiTcpTransport.DefaultPort` (18888), not a duplicated literal 7777.
+- CEP status decoder tests must cover the active flag at byte 0, battery payload starting at byte 1, firmware string starting at byte 20, and rejection of malformed payload lengths. Confirm exact upstream structure before changing test fixtures.
+- Latest BWM power-save features from `RfidResearchGroup/Proxmark5_BWM_esp32` commit `4889d2986f7ebba4bd071d2b9895aa5b779ae81c` are source-reported only. The UART RX buffer is 12288 bytes; callback teardown fix is `23bfa7b21004f91dba64468d398971919fca8eda`.
+- Do not mark CI, device behaviour, BLE/Wi-Fi behaviour, OTA, or battery telemetry as verified without the relevant evidence. No physical hardware tests were performed in this sync.
