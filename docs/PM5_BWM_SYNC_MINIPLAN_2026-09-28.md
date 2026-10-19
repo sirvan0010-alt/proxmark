@@ -158,3 +158,25 @@ Unit tests use a synthetic compressed mDNS response. CI and real PM5+BWM network
 - Physical PM5+BWM verification remains pending. No firmware writes are part of this update.
 
 Evidence: source/commit verified 2026-10-03; Control Center code change committed separately; physical device behaviour not verified.
+
+## Upstream sync — 2026-10-19
+
+### New upstream evidence since 2026-10-12
+
+- `RfidResearchGroup/proxmark3` merge `f3c1195b19263dfd324a54b4764a15fac90baced` (2026-10-17) fixes PM5 RTC snapshot coherence in `GetTickCount()`. Reading SBS before TIME/DATE prevents a second rollover from making the tick count move backwards and causing false receive timeouts. This is firmware-side; no client protocol change is needed.
+- `RfidResearchGroup/Proxmark5_BWM_esp32` merge `4889d2986f7ebba4bd071d2b9895aa5b779ae81c` (2026-10-18) adds dynamic frequency scaling, BLE modem sleep, light sleep, a persisted runtime power-save switch, Wi-Fi modem power-save selection, link-state broadcasts, a 12 KiB UART RX ring, and a 0x55 wake preamble. Companion PM5 host support was merged earlier in proxmark3 PR #3626. Do not equate these settings with the PM5 ARM idle-power command: they are distinct controls.
+- BWM commit `23bfa7b21004f91dba64468d398971919fca8eda` (2026-10-18) fixes `*_set_rx_callback` teardown ordering; callbacks must be cleared before deinitializing the TCP/UDP forwarding component.
+- `RfidResearchGroup/Proxmark5_FlipperZero_FAP` merges `61dd3fb955c218d12b29a56ed1eff7c7f7ee2e8f` and `eb8b803e281f3e11ba3ccb872906fcadc10fb819` (2026-10-18) add an HF 14a reader page and scheduler/CPU/ISR timing diagnostics. These are FAP UI changes, not new PM5 Control Center transport commands.
+- FPGA open-source synthesis work merged in proxmark3 commit `23ce7229a7917a574cea4596e8fe98b9cdb2c4b7` (2026-10-18), but issue #3710 reports worse timing than the GOWIN IDE, lowering PWM frequency and antenna drive voltage. Do not recommend open-source-generated PM5 FPGA images for hardware use until timing is resolved.
+- Issue #3648 was reopened on 2026-10-18 and updated on 2026-10-19: `bwm_cmd()` still discards valid non-matching frames while waiting for a BWM response. This can lose `DATA_FORWARD`, `LINK_STATE`, or response/flow-control frames when a wireless client is connected. Treat BWM control operations during an active wireless session as unreliable until upstream fixes the shared UART parser; do not attempt a client-side workaround that guesses at BWM framing.
+
+### Control Center defects found in review
+
+- `Pm5StatusDecoder.DecodeCepStatus()` currently passes bytes 0–18 to the battery decoder, but byte 0 is the CEP-active flag. The battery structure starts at byte 1; the correct slice is `payload.Slice(1, BatteryPayloadLength)`. Existing CEP test offsets also need to move by one byte and the test file needs explicit `System.Buffers.Binary` and `System.Text` imports.
+- The wireless UI still defaults the TCP port to 7777 even though `WifiTcpTransport.DefaultPort` is 18888. The UI should use that constant.
+- The desktop wireless UI does not yet expose the structured battery and CEP snapshots. Add read-only actions with capability/version gating; keep BWM mutation, power-save setters, and all flashing operations disabled.
+- Compatibility metadata is stale: BWM UART RX buffer should be 12288 bytes, source commit should advance to `23bfa7b21004f91dba64468d398971919fca8eda`, and the new power-management/link-state behaviour and callback fix must be recorded.
+
+### Status / verification boundary
+
+The above are source-verified findings only. The BWM power-save changes are not physical-hardware verified by this project. The reopened #3648 forwarding/parser issue and #3710 FPGA timing issue are active upstream risks. No firmware update or device mutation is authorized by this sync.
