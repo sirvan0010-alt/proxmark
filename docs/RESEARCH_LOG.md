@@ -215,3 +215,14 @@ No PM5/BWM physical device was flashed or modified. The BWM OTA UI remains disab
 **Result:** Control Center no longer defaults to the obsolete 7777 port. mDNS disappearance while Wi-Fi is disabled is expected; discovery/reconnect must retry rather than classify the device as absent.
 
 **Next action:** Add default/override tests and mDNS stop/restart tests; audit BLE management command definitions. No firmware writes.
+
+
+## 2026-10-19 — Retry upload of PM5/BWM fixes
+
+**Observation:** Retried the previously blocked GitHub writes on branch `pm5-bwm-sync-2026-10-19`. The CEP decoder already slices the battery payload at offset 1 and firmware version at offset 20 (commit `2b57ee791d7757c808486f4caf5c1a00fe93d41d`). This retry completed the missing explicit test imports, added a malformed CEP-length test, changed the wireless UI default to `WifiTcpTransport.DefaultPort`, and refreshed BWM compatibility metadata and the separate sync mini-plan.
+
+**Commits:** test imports `c3eee8796eb211ab22f880bee1b904fe5b0bccef`; UI default port `6810da701958e39f0af88ce6c3a953013d3f5bee`; mini-plan `83c1a0de8a59d69eb74e3c5f6e8ba82ffcab0fa8`; BWM compatibility `73f8b44645fe819da541fd16444894c9957788c7`.
+
+**Evidence level:** SOURCE_VERIFIED. No CI result has been confirmed for these latest commits and no physical PM5+BWM hardware was tested.
+
+**Next action:** Run the repository CI for the branch, inspect the resulting status, then open a pull request only if the checks pass. Keep the change on the feature branch until reviewed.

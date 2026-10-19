@@ -53,7 +53,7 @@ internal sealed class MainForm2 : Form
         AddRow(root,0,"Transport",_wirelessStatus);
         _wirelessTransport.DropDownStyle=ComboBoxStyle.DropDownList;_wirelessTransport.Width=260;_wirelessTransport.Items.AddRange(new object[]{"Wi-Fi / TCP","Bluetooth LE"});_wirelessTransport.SelectedIndex=0;_wirelessTransport.SelectedIndexChanged+=(_,_)=>UpdateWirelessEditors();root.Controls.Add(_wirelessTransport,1,1);
         root.Controls.Add(new Label{Text="Wi-Fi host / IP",ForeColor=Muted,Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleLeft},0,2);_wifiHost.Text="Proxmark5";_wifiHost.Width=300;root.Controls.Add(_wifiHost,1,2);
-        root.Controls.Add(new Label{Text="TCP port",ForeColor=Muted,Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleLeft},0,3);_wifiPort.Text="7777";_wifiPort.Width=100;root.Controls.Add(_wifiPort,1,3);
+        root.Controls.Add(new Label{Text="TCP port",ForeColor=Muted,Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleLeft},0,3);_wifiPort.Text=WifiTcpTransport.DefaultPort.ToString();_wifiPort.Width=100;root.Controls.Add(_wifiPort,1,3);
         root.Controls.Add(new Label{Text="BLE device",ForeColor=Muted,Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleLeft},0,4);_bleDevice.DropDownStyle=ComboBoxStyle.DropDownList;_bleDevice.Width=420;root.Controls.Add(_bleDevice,1,4);
         root.Controls.Add(new Label{Text="Find PM5 on Wi-Fi",ForeColor=Muted,Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleLeft},0,5);
         var discovery=new FlowLayoutPanel{Dock=DockStyle.Fill,AutoSize=true,BackColor=Bg};
