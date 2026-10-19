@@ -191,3 +191,15 @@ The above are source-verified findings only. The BWM power-save changes are not 
 - CEP status decoder tests must cover the active flag at byte 0, battery payload starting at byte 1, firmware string starting at byte 20, and rejection of malformed payload lengths. Confirm exact upstream structure before changing test fixtures.
 - Latest BWM power-save features from `RfidResearchGroup/Proxmark5_BWM_esp32` commit `4889d2986f7ebba4bd071d2b9895aa5b779ae81c` are source-reported only. The UART RX buffer is 12288 bytes; callback teardown fix is `23bfa7b21004f91dba64468d398971919fca8eda`.
 - Do not mark CI, device behaviour, BLE/Wi-Fi behaviour, OTA, or battery telemetry as verified without the relevant evidence. No physical hardware tests were performed in this sync.
+
+
+### Retry upload completion update — 2026-10-19
+
+The following previously listed repository edits are now committed on this branch:
+- CEP decoder offset: already present in commit `2b57ee791d7757c808486f4caf5c1a00fe93d41d`.
+- Explicit `System.Buffers.Binary` and `System.Text` imports plus malformed CEP length test: commit `08932797366ea3e85b0c4cdc4ee71d22f0daebc8` (includes the import correction from `c3eee8796eb211ab22f880bee1b904fe5b0bccef`).
+- GUI TCP port now uses `WifiTcpTransport.DefaultPort`: commit `6810da701958e39f0af88ce6c3a953013d3f5bee`.
+- BWM compatibility metadata refreshed: commit `73f8b44645fe819da541fd16444894c9957788c7`.
+- Research log updated: commit `15a690c3db4a2a00a6f5fd6f67e130612551df0a`.
+
+Validation remains pending: GitHub reported no combined status checks for the latest commit at the time of this update. No physical PM5+BWM test was run. Do not mark CI or hardware behaviour as verified.
