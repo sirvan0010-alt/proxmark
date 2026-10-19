@@ -74,4 +74,11 @@ public sealed class Pm5StatusDecoderTests
         Assert.Equal((ushort)0x0184, Pm5StatusDecoder.BatteryCommand);
         Assert.Equal((ushort)0x0185, Pm5StatusDecoder.CepStatusCommand);
     }
+    
+    [Fact]
+    public void DecodeCepStatus_RejectsWrongLength()
+    {
+        Assert.Throws<InvalidDataException>(() =>
+            Pm5StatusDecoder.DecodeCepStatus(new byte[Pm5StatusDecoder.CepStatusPayloadLength - 1]));
+    }
 }
