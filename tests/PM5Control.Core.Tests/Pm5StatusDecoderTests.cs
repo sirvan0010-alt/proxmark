@@ -1,3 +1,5 @@
+using System.Buffers.Binary;
+using System.Text;
 using PM5Control.Core.Protocols.Pm3;
 
 namespace PM5Control.Core.Tests;
