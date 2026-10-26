@@ -224,3 +224,10 @@ Validation remains pending: GitHub reported no combined status checks for the la
 - Track upstream PR #3728 as `OPEN_SOURCE_REVIEW`, not merged/verified by our project.
 - No hardware tests were performed. BLE/Wi-Fi/OTA, CEP operation, and battery telemetry remain not hardware-verified.
 - Upstream README stability warning remains in force: PM5 firmware is actively developed and the BWM addon is not currently recommended for installation.
+
+
+### Additional PM5 issues/PRs reviewed on 2026-10-26
+- Open upstream PR #3709 (`0ce9f05a5142a5e7f1e790c40c0924b9dd461f65`) addresses PM5-specific HF MIFARE Classic nested/autopwn reliability (receive timing jitter and timeout/calibration handling). This is not a BWM/transport change; track it as a PM5 firmware/client compatibility improvement, not a Control Center feature to port.
+- Upstream issue #3648 remains open: `bwm_cmd()` can drop valid foreign frames such as `DATA_FORWARD`, flow-control ACKs, and `LINK_STATE`. This is directly relevant to BWM communication correctness. Do not attempt a client-side parser workaround; the proposed fix belongs in firmware frame dispatch.
+- Upstream issue #3680 remains open for PM5 LF TI/HDX read/timeouts/lockup. Avoid presenting `lf ti read` as supported or reliable on PM5 until fixed and confirmed.
+- Current CI for the corrected test fixture commit `6c30b0afce371f480ad0586afde9dfc18c81ebe6`: Ubuntu job passed; Windows job was still in progress at the latest check. Overall PR remains draft until all checks pass.
