@@ -230,4 +230,9 @@ Validation remains pending: GitHub reported no combined status checks for the la
 - Open upstream PR #3709 (`0ce9f05a5142a5e7f1e790c40c0924b9dd461f65`) addresses PM5-specific HF MIFARE Classic nested/autopwn reliability (receive timing jitter and timeout/calibration handling). This is not a BWM/transport change; track it as a PM5 firmware/client compatibility improvement, not a Control Center feature to port.
 - Upstream issue #3648 remains open: `bwm_cmd()` can drop valid foreign frames such as `DATA_FORWARD`, flow-control ACKs, and `LINK_STATE`. This is directly relevant to BWM communication correctness. Do not attempt a client-side parser workaround; the proposed fix belongs in firmware frame dispatch.
 - Upstream issue #3680 remains open for PM5 LF TI/HDX read/timeouts/lockup. Avoid presenting `lf ti read` as supported or reliable on PM5 until fixed and confirmed.
-- Current CI for the corrected test fixture commit `6c30b0afce371f480ad0586afde9dfc18c81ebe6`: Ubuntu job passed; Windows job was still in progress at the latest check. Overall PR remains draft until all checks pass.
+- Current CI for corrected test fixture commit `6c30b0afce371f480ad0586afde9dfc18c81ebe6`: workflow run `40277839015` completed successfully on Ubuntu, Windows, both evidence gates, and integration/release readiness. Later commits on the branch are documentation-only; the latest-head workflow may still be running. Keep the PR draft until the latest head checks complete.
+
+
+### CI result confirmation — 2026-10-26
+- Workflow run [40277839015](https://github.com/sirvan0010-alt/proxmark/actions/runs/40277839015) for code/test commit `6c30b0afce371f480ad0586afde9dfc18c81ebe6` completed with success for all jobs, including Windows and Ubuntu.
+- The fix is therefore CI-verified at that commit. This does not imply physical hardware verification. Later commits in this branch update only documentation/compatibility evidence; do not mark latest-branch CI green until its own run completes.
