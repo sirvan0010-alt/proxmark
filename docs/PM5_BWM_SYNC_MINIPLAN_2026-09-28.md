@@ -203,3 +203,24 @@ The following previously listed repository edits are now committed on this branc
 - Research log updated: commit `15a690c3db4a2a00a6f5fd6f67e130612551df0a`.
 
 Validation remains pending: GitHub reported no combined status checks for the latest commit at the time of this update. No physical PM5+BWM test was run. Do not mark CI or hardware behaviour as verified.
+
+
+## 2026-10-26 — Weekly upstream sync and CI correction
+
+### Upstream delta since 2026-10-19
+- `RfidResearchGroup/Proxmark5_BWM_esp32`: no commits after `23bfa7b21004f91dba64468d398971919fca8eda` (2026-10-18). Power-save/DFS/light-sleep feature set remains at merge `4889d2986f7ebba4bd071d2b9895aa5b779ae81c`; callback teardown fix remains current. No new BWM firmware release/OTA change was found in the current repository history.
+- `RfidResearchGroup/Proxmark5_FlipperZero_FAP`: no commits after `eb8b803e281f3e11ba3ccb872906fcadc10fb819` (2026-10-18). Scheduler/CPU diagnostic page and HF14a reader remain the latest relevant UI additions.
+- `RfidResearchGroup/proxmark3`: general master activity through 2026-10-24 is mostly unrelated to PM5/BWM (EMV/Calypso handling and an AVX2 warning fix). New directly relevant open PR `#3728`, head `8cdce6ab7857972004496aa46d4af9c70a4a8d12`, proposes clearing stale SPI1 RX overrun data in `cep_spi_data_available()` and on every exit from `cep_spi_write_sync()`. Its description reports a real PM5 + Flipper FAP hardware trial and improved HF14a CEP reads. This is still an OPEN PR, not merged upstream.
+- PR #3728 is firmware-side SPI1/CEP reliability work. No desktop-client protocol change is justified; keep it tracked and do not copy firmware internals into Control Center.
+
+### Control Center CI failure found and correction
+- Existing PR #15 CI run `39213150350` failed on both Ubuntu and Windows in `Pm5StatusDecoderTests`.
+- Root causes were incorrect test fixtures, not a compiler failure: the battery fixture had 21 bytes despite the source-backed 19-byte `bwm_battery_info_t` layout; the CEP fixture wrote SoC/voltage one byte too early and did not set gauge-ok.
+- Corrected fixtures in commit `6c30b0afce371f480ad0586afde9dfc18c81ebe6`: battery payload now matches the 19-byte packed upstream structure; CEP fields are written at overall offsets 3 (SoC) and 5 (voltage), with BWM-present and gauge-ok set at offsets 1 and 2.
+- The corrected commit is source-verified against upstream `include/pm3_cmd.h`; the new CI run must pass before the PR can be marked ready. Do not describe CI as passing until GitHub reports a successful run.
+
+### Current decision
+- Safe change applied: test fixtures only. No protocol/production decoder semantics were loosened.
+- Track upstream PR #3728 as `OPEN_SOURCE_REVIEW`, not merged/verified by our project.
+- No hardware tests were performed. BLE/Wi-Fi/OTA, CEP operation, and battery telemetry remain not hardware-verified.
+- Upstream README stability warning remains in force: PM5 firmware is actively developed and the BWM addon is not currently recommended for installation.
