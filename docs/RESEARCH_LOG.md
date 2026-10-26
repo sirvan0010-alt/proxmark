@@ -226,3 +226,16 @@ No PM5/BWM physical device was flashed or modified. The BWM OTA UI remains disab
 **Evidence level:** SOURCE_VERIFIED. No CI result has been confirmed for these latest commits and no physical PM5+BWM hardware was tested.
 
 **Next action:** Run the repository CI for the branch, inspect the resulting status, then open a pull request only if the checks pass. Keep the change on the feature branch until reviewed.
+
+
+## 2026-10-26 — Weekly PM5/BWM sync
+
+**Upstream scan:** `RfidResearchGroup/proxmark3` has general master commits through 2026-10-24, mainly EMV/Calypso/AID handling and a compiler-warning fix, with no additional merged PM5/BWM transport commit identified since the prior sync. The directly relevant new item is open PR #3728 (head `8cdce6ab7857972004496aa46d4af9c70a4a8d12`): clear stale SPI1 RX overrun data around CEP read/write polling in `armsrc/pm5_cep.c`. PR text describes hardware trials on a PM5 + Flipper FAP and improved CEP HF14a page reads; it is not merged, so do not treat it as an upstream release.
+ 
+**Other repositories:** BWM ESP32 remains at `23bfa7b21004f91dba64468d398971919fca8eda` (2026-10-18), with power-save merge `4889d2986f7ebba4bd071d2b9895aa5b779ae81c`; Flipper FAP remains at `eb8b803e281f3e11ba3ccb872906fcadc10fb819` (2026-10-18). No new BWM firmware/OTA commit found after the previous run.
+
+**Control Center CI:** PR #15 run `39213150350` failed on Ubuntu and Windows because the test fixtures contradicted the upstream packed structure: the battery test vector was 21 bytes rather than 19, and CEP test values were offset one byte early. Corrected in commit `6c30b0afce371f480ad0586afde9dfc18c81ebe6`. The fix only adjusts test data and does not relax decoder validation.
+
+**Evidence level:** Source-verified for upstream source/PR and test-fixture correction. New CI result pending. No physical PM5+BWM test was performed by this project.
+
+**Next action:** Confirm CI on the new head. Keep PR #15 draft until tests pass. Track upstream PR #3728 and re-check whether it merges; no client change needed for its firmware-only SPI1 fix.
