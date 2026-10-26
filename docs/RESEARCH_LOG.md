@@ -239,3 +239,10 @@ No PM5/BWM physical device was flashed or modified. The BWM OTA UI remains disab
 **Evidence level:** Source-verified for upstream source/PR and test-fixture correction. New CI result pending. No physical PM5+BWM test was performed by this project.
 
 **Next action:** Confirm CI on the new head. Keep PR #15 draft until tests pass. Track upstream PR #3728 and re-check whether it merges; no client change needed for its firmware-only SPI1 fix.
+
+
+### Additional open PM5 risks checked — 2026-10-26
+- PR #3709 (open, head `0ce9f05a5142a5e7f1e790c40c0924b9dd461f65`) proposes PM5-specific HF MIFARE Classic nested/autopwn reliability changes. No Control Center transport change is implied.
+- Issue #3648 remains open for BWM frame dispatch dropping unrelated frames while `bwm_cmd()` waits for its own reply (including `DATA_FORWARD`, forwarding ACKs and `LINK_STATE`). Firmware-side issue; no client-side workaround added.
+- Issue #3680 remains open for PM5 LF TI/HDX read and subsequent communication timeouts/lockup. Do not assume this command is reliable on PM5.
+- Corrected test fixtures commit `6c30b0afce371f480ad0586afde9dfc18c81ebe6`: Ubuntu CI job passed; Windows was still running at the last observation. Overall CI remains pending until all jobs conclude.
