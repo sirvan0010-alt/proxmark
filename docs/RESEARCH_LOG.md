@@ -245,4 +245,7 @@ No PM5/BWM physical device was flashed or modified. The BWM OTA UI remains disab
 - PR #3709 (open, head `0ce9f05a5142a5e7f1e790c40c0924b9dd461f65`) proposes PM5-specific HF MIFARE Classic nested/autopwn reliability changes. No Control Center transport change is implied.
 - Issue #3648 remains open for BWM frame dispatch dropping unrelated frames while `bwm_cmd()` waits for its own reply (including `DATA_FORWARD`, forwarding ACKs and `LINK_STATE`). Firmware-side issue; no client-side workaround added.
 - Issue #3680 remains open for PM5 LF TI/HDX read and subsequent communication timeouts/lockup. Do not assume this command is reliable on PM5.
-- Corrected test fixtures commit `6c30b0afce371f480ad0586afde9dfc18c81ebe6`: Ubuntu CI job passed; Windows was still running at the last observation. Overall CI remains pending until all jobs conclude.
+- Corrected test fixtures commit `6c30b0afce371f480ad0586afde9dfc18c81ebe6`: workflow run `40277839015` subsequently completed successfully on Ubuntu, Windows, both evidence gates, and the integration/release-readiness gate. This verifies CI for that code/test commit; later branch commits only changed docs/compatibility metadata, and their own latest-head run must be checked separately.
+
+
+**CI confirmation:** Run [40277839015](https://github.com/sirvan0010-alt/proxmark/actions/runs/40277839015) completed successfully across Windows and Ubuntu plus evidence/release gates for code/test commit `6c30b0afce371f480ad0586afde9dfc18c81ebe6`. Hardware remains unverified.
