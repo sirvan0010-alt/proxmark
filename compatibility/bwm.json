@@ -36,9 +36,39 @@
       "previousRun": 39213150350,
       "previousResult": "FAILED_TEST_FIXTURES",
       "correctionCommit": "6c30b0afce371f480ad0586afde9dfc18c81ebe6",
-      "latestResult": "PENDING",
-      "note": "Previous Ubuntu and Windows runs failed because the battery test vector was 21 bytes instead of 19 and CEP fixture offsets were one byte early. Corrected test data; awaiting new workflow result."
-    }
+      "latestResult": "UBUNTU_PASS_WINDOWS_IN_PROGRESS",
+      "note": "Previous run failed due to malformed test fixtures. Corrected test fixture commit has passed Ubuntu; Windows job was still in progress at last observation. Do not mark overall CI passed until all jobs complete.",
+      "latestTestCommit": "6c30b0afce371f480ad0586afde9dfc18c81ebe6"
+    },
+    "openRisks": [
+      {
+        "id": 3648,
+        "title": "BWM command dispatcher can drop forwarded data, ACKs and LINK_STATE",
+        "status": "OPEN",
+        "impact": "Potential BWM link-state desynchronization and lost forwarded commands during management requests",
+        "ownership": "Firmware-side; no Control Center workaround"
+      },
+      {
+        "id": 3680,
+        "title": "PM5 LF TI/HDX read and later LF communication timeouts",
+        "status": "OPEN",
+        "impact": "Do not claim LF TI/HDX reliability; avoid treating failures as a BWM transport regression"
+      },
+      {
+        "id": 3709,
+        "title": "PM5 HF MIFARE Classic nested/autopwn reliability",
+        "status": "OPEN_PR",
+        "headCommit": "0ce9f05a5142a5e7f1e790c40c0924b9dd461f65",
+        "impact": "PM5 firmware/client timing and calibration improvement; no Control Center transport change"
+      },
+      {
+        "id": 3728,
+        "title": "CEP SPI1 stale RX/overrun byte cleanup",
+        "status": "OPEN_PR",
+        "headCommit": "8cdce6ab7857972004496aa46d4af9c70a4a8d12",
+        "impact": "Firmware-only CEP reliability fix; do not port into the desktop client"
+      }
+    ]
   },
   "deviceModel": {
     "value": "0xDA10",
