@@ -1,3 +1,5 @@
+using System.Buffers.Binary;
+using System.Text;
 using PM5Control.Core.Protocols.Pm3;
 
 namespace PM5Control.Core.Tests;
@@ -15,9 +17,8 @@ public sealed class Pm5StatusDecoderTests
             0x2E, 0xFB,
             0x58, 0x02,
             0x20, 0x03,
-            0x84, 0x03,
+            0x84, 0x01,
             0x6E, 0x01,
-            0x1A, 0x01,
             0x00,
             0x02,
             0x63
@@ -50,9 +51,10 @@ public sealed class Pm5StatusDecoderTests
     {
         var payload = new byte[Pm5StatusDecoder.CepStatusPayloadLength];
         payload[0] = 1;
-        payload[1] = 1;
-        BinaryPrimitives.WriteUInt16LittleEndian(payload.AsSpan(2), 88);
-        BinaryPrimitives.WriteUInt16LittleEndian(payload.AsSpan(4), 4100);
+        payload[1] = 1; // battery present
+        payload[2] = 1; // gauge OK
+        BinaryPrimitives.WriteUInt16LittleEndian(payload.AsSpan(3), 88);
+        BinaryPrimitives.WriteUInt16LittleEndian(payload.AsSpan(5), 4100);
         Encoding.UTF8.GetBytes("PM5-TEST").CopyTo(payload.AsSpan(20));
 
         var status = Pm5StatusDecoder.DecodeCepStatus(payload);
@@ -71,5 +73,12 @@ public sealed class Pm5StatusDecoderTests
         Assert.False(Pm3CommandCode.IsSafeReadOnlyProbe(Pm3CommandCode.Pm5BwmEspOta));
         Assert.Equal((ushort)0x0184, Pm5StatusDecoder.BatteryCommand);
         Assert.Equal((ushort)0x0185, Pm5StatusDecoder.CepStatusCommand);
+    }
+    
+    [Fact]
+    public void DecodeCepStatus_RejectsWrongLength()
+    {
+        Assert.Throws<InvalidDataException>(() =>
+            Pm5StatusDecoder.DecodeCepStatus(new byte[Pm5StatusDecoder.CepStatusPayloadLength - 1]));
     }
 }

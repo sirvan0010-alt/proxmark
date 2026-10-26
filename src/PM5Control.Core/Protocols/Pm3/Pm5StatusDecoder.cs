@@ -58,7 +58,7 @@ public static class Pm5StatusDecoder
         if (payload.Length != CepStatusPayloadLength)
             throw new InvalidDataException($"CMD_CEP_STATUS payload must be {CepStatusPayloadLength} bytes, got {payload.Length}.");
 
-        var battery = DecodeBattery(payload[..BatteryPayloadLength]);
+        var battery = DecodeBattery(payload.Slice(1, BatteryPayloadLength));
         var versionBytes = payload.Slice(20, 24);
         var nul = versionBytes.IndexOf((byte)0);
         if (nul >= 0)

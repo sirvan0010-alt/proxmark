@@ -215,3 +215,37 @@ No PM5/BWM physical device was flashed or modified. The BWM OTA UI remains disab
 **Result:** Control Center no longer defaults to the obsolete 7777 port. mDNS disappearance while Wi-Fi is disabled is expected; discovery/reconnect must retry rather than classify the device as absent.
 
 **Next action:** Add default/override tests and mDNS stop/restart tests; audit BLE management command definitions. No firmware writes.
+
+
+## 2026-10-19 — Retry upload of PM5/BWM fixes
+
+**Observation:** Retried the previously blocked GitHub writes on branch `pm5-bwm-sync-2026-10-19`. The CEP decoder already slices the battery payload at offset 1 and firmware version at offset 20 (commit `2b57ee791d7757c808486f4caf5c1a00fe93d41d`). This retry completed the missing explicit test imports, added a malformed CEP-length test, changed the wireless UI default to `WifiTcpTransport.DefaultPort`, and refreshed BWM compatibility metadata and the separate sync mini-plan.
+
+**Commits:** test imports `c3eee8796eb211ab22f880bee1b904fe5b0bccef`; UI default port `6810da701958e39f0af88ce6c3a953013d3f5bee`; mini-plan `83c1a0de8a59d69eb74e3c5f6e8ba82ffcab0fa8`; BWM compatibility `73f8b44645fe819da541fd16444894c9957788c7`.
+
+**Evidence level:** SOURCE_VERIFIED. No CI result has been confirmed for these latest commits and no physical PM5+BWM hardware was tested.
+
+**Next action:** Run the repository CI for the branch, inspect the resulting status, then open a pull request only if the checks pass. Keep the change on the feature branch until reviewed.
+
+
+## 2026-10-26 — Weekly PM5/BWM sync
+
+**Upstream scan:** `RfidResearchGroup/proxmark3` has general master commits through 2026-10-24, mainly EMV/Calypso/AID handling and a compiler-warning fix, with no additional merged PM5/BWM transport commit identified since the prior sync. The directly relevant new item is open PR #3728 (head `8cdce6ab7857972004496aa46d4af9c70a4a8d12`): clear stale SPI1 RX overrun data around CEP read/write polling in `armsrc/pm5_cep.c`. PR text describes hardware trials on a PM5 + Flipper FAP and improved CEP HF14a page reads; it is not merged, so do not treat it as an upstream release.
+ 
+**Other repositories:** BWM ESP32 remains at `23bfa7b21004f91dba64468d398971919fca8eda` (2026-10-18), with power-save merge `4889d2986f7ebba4bd071d2b9895aa5b779ae81c`; Flipper FAP remains at `eb8b803e281f3e11ba3ccb872906fcadc10fb819` (2026-10-18). No new BWM firmware/OTA commit found after the previous run.
+
+**Control Center CI:** PR #15 run `39213150350` failed on Ubuntu and Windows because the test fixtures contradicted the upstream packed structure: the battery test vector was 21 bytes rather than 19, and CEP test values were offset one byte early. Corrected in commit `6c30b0afce371f480ad0586afde9dfc18c81ebe6`. The fix only adjusts test data and does not relax decoder validation.
+
+**Evidence level:** Source-verified for upstream source/PR and test-fixture correction. New CI result pending. No physical PM5+BWM test was performed by this project.
+
+**Next action:** Confirm CI on the new head. Keep PR #15 draft until tests pass. Track upstream PR #3728 and re-check whether it merges; no client change needed for its firmware-only SPI1 fix.
+
+
+### Additional open PM5 risks checked — 2026-10-26
+- PR #3709 (open, head `0ce9f05a5142a5e7f1e790c40c0924b9dd461f65`) proposes PM5-specific HF MIFARE Classic nested/autopwn reliability changes. No Control Center transport change is implied.
+- Issue #3648 remains open for BWM frame dispatch dropping unrelated frames while `bwm_cmd()` waits for its own reply (including `DATA_FORWARD`, forwarding ACKs and `LINK_STATE`). Firmware-side issue; no client-side workaround added.
+- Issue #3680 remains open for PM5 LF TI/HDX read and subsequent communication timeouts/lockup. Do not assume this command is reliable on PM5.
+- Corrected test fixtures commit `6c30b0afce371f480ad0586afde9dfc18c81ebe6`: workflow run `40277839015` subsequently completed successfully on Ubuntu, Windows, both evidence gates, and the integration/release-readiness gate. This verifies CI for that code/test commit; later branch commits only changed docs/compatibility metadata, and their own latest-head run must be checked separately.
+
+
+**CI confirmation:** Run [40277839015](https://github.com/sirvan0010-alt/proxmark/actions/runs/40277839015) completed successfully across Windows and Ubuntu plus evidence/release gates for code/test commit `6c30b0afce371f480ad0586afde9dfc18c81ebe6`. Hardware remains unverified.

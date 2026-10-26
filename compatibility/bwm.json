@@ -1,15 +1,15 @@
 {
   "schemaVersion": 4,
-  "lastChecked": "2026-10-03",
+  "lastChecked": "2026-10-26",
   "component": "PM5 BWM / ESP32 subsystem",
   "status": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
   "upstream": {
     "repository": "RfidResearchGroup/Proxmark5_BWM_esp32",
     "branch": "master",
-    "commit": "8153c26efee3ba2bb8dd6485223ac0742e4b165f",
-    "researchDate": "2026-10-03",
+    "commit": "23bfa7b21004f91dba64468d398971919fca8eda",
+    "researchDate": "2026-10-19",
     "previousBaseline": "b450b1336dfe00fb507efb535ff3d8a1d9d036a9",
-    "latestChange": "BWM PR #8 fixes Wi-Fi stop/restart hangs by stopping mDNS when Wi-Fi modes are disabled; mDNS lifecycle now follows Wi-Fi lifecycle. Upstream PM5 TCP default changed from 7777 to 18888 in proxmark3 commits 133b9815/f9bd1c30/63063bd0.",
+    "latestChange": "BWM commit 4889d2986f7ebba4bd071d2b9895aa5b779ae81c adds power-save/DFS/light-sleep controls, BLE/Wi-Fi modem power-save, link-state broadcasts, a 12 KiB UART RX ring and a 0x55 wake preamble. Commit 23bfa7b21004f91dba64468d398971919fca8eda fixes RX callback teardown ordering. Source-verified only; no physical verification.",
     "ciStatus": "NOT_RECORDED_FOR_EXACT_COMMIT",
     "previousCiStatus": "SUCCESS",
     "previousCiCommit": "e0c4982800eb7d1ca16045631f3460f9f176427c",
@@ -19,7 +19,58 @@
     "capabilityFlags": {
       "bwmVersion": 12,
       "cepVersion": 13
-    }
+    },
+    "lastChecked": "2026-10-26",
+    "cepTransportOpenPr": {
+      "repository": "RfidResearchGroup/proxmark3",
+      "pullRequest": 3728,
+      "headCommit": "8cdce6ab7857972004496aa46d4af9c70a4a8d12",
+      "status": "OPEN_NOT_MERGED",
+      "summary": "Proposes clearing stale SPI1 RX overrun data in CEP read/write polling paths. Firmware-only; no Control Center client protocol change.",
+      "evidence": "PR description reports PM5 + Flipper FAP hardware trials; not independently verified by this project."
+    },
+    "latestBwmEsp32Commit": "23bfa7b21004f91dba64468d398971919fca8eda",
+    "latestFapCommit": "eb8b803e281f3e11ba3ccb872906fcadc10fb819",
+    "controlCenterCi": {
+      "pr": 15,
+      "previousRun": 39213150350,
+      "previousResult": "FAILED_TEST_FIXTURES",
+      "correctionCommit": "6c30b0afce371f480ad0586afde9dfc18c81ebe6",
+      "latestResult": "CODE_TEST_COMMIT_CI_PASS",
+      "note": "All jobs passed on the corrected code/test commit (Ubuntu, Windows, evidence gates, integration/release-readiness). Later branch commits are docs/compatibility-only; latest-head workflow must be checked separately. CI pass is not hardware verification.",
+      "latestTestCommit": "6c30b0afce371f480ad0586afde9dfc18c81ebe6",
+      "workflowRun": 40277839015,
+      "workflowUrl": "https://github.com/sirvan0010-alt/proxmark/actions/runs/40277839015"
+    },
+    "openRisks": [
+      {
+        "id": 3648,
+        "title": "BWM command dispatcher can drop forwarded data, ACKs and LINK_STATE",
+        "status": "OPEN",
+        "impact": "Potential BWM link-state desynchronization and lost forwarded commands during management requests",
+        "ownership": "Firmware-side; no Control Center workaround"
+      },
+      {
+        "id": 3680,
+        "title": "PM5 LF TI/HDX read and later LF communication timeouts",
+        "status": "OPEN",
+        "impact": "Do not claim LF TI/HDX reliability; avoid treating failures as a BWM transport regression"
+      },
+      {
+        "id": 3709,
+        "title": "PM5 HF MIFARE Classic nested/autopwn reliability",
+        "status": "OPEN_PR",
+        "headCommit": "0ce9f05a5142a5e7f1e790c40c0924b9dd461f65",
+        "impact": "PM5 firmware/client timing and calibration improvement; no Control Center transport change"
+      },
+      {
+        "id": 3728,
+        "title": "CEP SPI1 stale RX/overrun byte cleanup",
+        "status": "OPEN_PR",
+        "headCommit": "8cdce6ab7857972004496aa46d4af9c70a4a8d12",
+        "impact": "Firmware-only CEP reliability fix; do not port into the desktop client"
+      }
+    ]
   },
   "deviceModel": {
     "value": "0xDA10",
@@ -29,10 +80,10 @@
   },
   "transport": {
     "uartBaud": 460800,
-    "uartRxBufferBytes": 4096,
+    "uartRxBufferBytes": 12288,
     "bleRetryDelayMs": 10,
     "confidence": "SOURCE_REPORTED",
-    "source": "RfidResearchGroup/Proxmark5_BWM_esp32 DEV.md and commit 4818511a2b179c61f80f54b5f825428cba51deb8",
+    "source": "RfidResearchGroup/Proxmark5_BWM_esp32 DEV.md and commit 23bfa7b21004f91dba64468d398971919fca8eda; UART RX buffer size from commit 4889d2986f7ebba4bd071d2b9895aa5b779ae81c",
     "mdnsService": "_proxmark5._tcp",
     "mdnsHostname": "<device-identifier>.local",
     "mdnsBuildFlag": "CONFIG_PM5_MDNS_ENABLE (Kconfig default y; build may override)",
@@ -54,13 +105,15 @@
     "pm5IdlePowerSave": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
     "autoOff": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
     "mdns": "SOURCE_VERIFIED_OPTIONAL_DEFAULT_ON_NOT_HARDWARE_VERIFIED",
-    "cep": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED"
+    "cep": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
+    "powerSaveControls": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
+    "linkStateBroadcast": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED"
   },
   "chargerPolicy": {
     "automaticConfiguration": "DISABLED",
     "reason": "No verified PM5+BWM charger-register write/readback path has been established on physical hardware.",
     "note": "The Control Center must not silently apply a guessed charge-voltage target. Battery chemistry and production charge limits remain hardware/pack specific."
   },
-  "evidenceRule": "Upstream source and CI evidence must never be promoted to HARDWARE_VERIFIED without reproducible observation on a physical PM5+BWM unit. The mDNS option being default-enabled in Kconfig does not prove it is enabled in the user's installed binary.",
+  "evidenceRule": "Upstream source and CI evidence must never be promoted to HARDWARE_VERIFIED without reproducible observation on a physical PM5+BWM unit. BWM power-save and callback changes remain source-verified only. Upstream PR #3728 is open and unmerged; it describes hardware trials but this project has not independently verified them.",
   "integrationPolicy": "Control Center now implements native PM5 Wi-Fi/TCP PM3-NG transport and the source-verified BWM ESP32-C2 OTA command protocol. Physical end-to-end verification remains separate. Do not label the wireless stack stable/production-ready."
 }
