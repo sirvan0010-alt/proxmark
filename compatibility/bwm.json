@@ -1,6 +1,6 @@
 {
   "schemaVersion": 4,
-  "lastChecked": "2026-10-19",
+  "lastChecked": "2026-10-26",
   "component": "PM5 BWM / ESP32 subsystem",
   "status": "SOURCE_VERIFIED_NOT_HARDWARE_VERIFIED",
   "upstream": {
@@ -19,6 +19,25 @@
     "capabilityFlags": {
       "bwmVersion": 12,
       "cepVersion": 13
+    },
+    "lastChecked": "2026-10-26",
+    "cepTransportOpenPr": {
+      "repository": "RfidResearchGroup/proxmark3",
+      "pullRequest": 3728,
+      "headCommit": "8cdce6ab7857972004496aa46d4af9c70a4a8d12",
+      "status": "OPEN_NOT_MERGED",
+      "summary": "Proposes clearing stale SPI1 RX overrun data in CEP read/write polling paths. Firmware-only; no Control Center client protocol change.",
+      "evidence": "PR description reports PM5 + Flipper FAP hardware trials; not independently verified by this project."
+    },
+    "latestBwmEsp32Commit": "23bfa7b21004f91dba64468d398971919fca8eda",
+    "latestFapCommit": "eb8b803e281f3e11ba3ccb872906fcadc10fb819",
+    "controlCenterCi": {
+      "pr": 15,
+      "previousRun": 39213150350,
+      "previousResult": "FAILED_TEST_FIXTURES",
+      "correctionCommit": "6c30b0afce371f480ad0586afde9dfc18c81ebe6",
+      "latestResult": "PENDING",
+      "note": "Previous Ubuntu and Windows runs failed because the battery test vector was 21 bytes instead of 19 and CEP fixture offsets were one byte early. Corrected test data; awaiting new workflow result."
     }
   },
   "deviceModel": {
@@ -63,6 +82,6 @@
     "reason": "No verified PM5+BWM charger-register write/readback path has been established on physical hardware.",
     "note": "The Control Center must not silently apply a guessed charge-voltage target. Battery chemistry and production charge limits remain hardware/pack specific."
   },
-  "evidenceRule": "Upstream source and CI evidence must never be promoted to HARDWARE_VERIFIED without reproducible observation on a physical PM5+BWM unit. The 2026-10-19 BWM power-save and callback changes are source-verified only; no physical test was performed.",
+  "evidenceRule": "Upstream source and CI evidence must never be promoted to HARDWARE_VERIFIED without reproducible observation on a physical PM5+BWM unit. BWM power-save and callback changes remain source-verified only. Upstream PR #3728 is open and unmerged; it describes hardware trials but this project has not independently verified them.",
   "integrationPolicy": "Control Center now implements native PM5 Wi-Fi/TCP PM3-NG transport and the source-verified BWM ESP32-C2 OTA command protocol. Physical end-to-end verification remains separate. Do not label the wireless stack stable/production-ready."
 }
