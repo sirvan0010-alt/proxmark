@@ -36,9 +36,11 @@
       "previousRun": 39213150350,
       "previousResult": "FAILED_TEST_FIXTURES",
       "correctionCommit": "6c30b0afce371f480ad0586afde9dfc18c81ebe6",
-      "latestResult": "UBUNTU_PASS_WINDOWS_IN_PROGRESS",
-      "note": "Previous run failed due to malformed test fixtures. Corrected test fixture commit has passed Ubuntu; Windows job was still in progress at last observation. Do not mark overall CI passed until all jobs complete.",
-      "latestTestCommit": "6c30b0afce371f480ad0586afde9dfc18c81ebe6"
+      "latestResult": "CODE_TEST_COMMIT_CI_PASS",
+      "note": "All jobs passed on the corrected code/test commit (Ubuntu, Windows, evidence gates, integration/release-readiness). Later branch commits are docs/compatibility-only; latest-head workflow must be checked separately. CI pass is not hardware verification.",
+      "latestTestCommit": "6c30b0afce371f480ad0586afde9dfc18c81ebe6",
+      "workflowRun": 40277839015,
+      "workflowUrl": "https://github.com/sirvan0010-alt/proxmark/actions/runs/40277839015"
     },
     "openRisks": [
       {
